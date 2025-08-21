@@ -6,6 +6,17 @@ cliVersion: 4.7.1
 domain: toolkit.vault.hopopops.com
 layout:
 - go.kubebuilder.io/v4
+multigroup: true
 projectName: vault-operator
 repo: hopopops/vault-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: sys
+  kind: Policy
+  path: hopopops/vault-operator/api/sys/v1beta1
+  version: v1beta1
 version: "3"

@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"os"
@@ -36,6 +37,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	sysv1beta1 "hopopops/vault-operator/api/sys/v1beta1"
+	"hopopops/vault-operator/internal/connector/vault"
+	syscontroller "hopopops/vault-operator/internal/controller/sys"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -47,6 +52,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(sysv1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -77,6 +83,12 @@ func main() {
 	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+
+	var vaultAddr, vaultRole, vaultTokenPath string
+	flag.StringVar(&vaultAddr, "vault-addr", "http://127.0.0.1:8200", "The address of the vault server.")
+	flag.StringVar(&vaultRole, "vault-role", "", "The vault role to use.")
+	flag.StringVar(&vaultTokenPath, "vault-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The path to the vault token.")
+
 	opts := zap.Options{
 		Development: true,
 	}
@@ -198,6 +210,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	v, _, err := vault.NewVaultKubernetesClient(context.Background(), &vault.Parameters{Address: vaultAddr, Role: vaultRole, TokenPath: vaultTokenPath})
+	if err != nil || v == nil {
+		setupLog.Error(err, "unable to create vault kubernetes client")
+		os.Exit(1)
+	}
+
+	if err := (&syscontroller.PolicyReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v.Client,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Policy")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
