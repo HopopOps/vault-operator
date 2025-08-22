@@ -1,4 +1,5 @@
 ## Append samples of your project ##
 resources:
-- sys_v1beta1_policy.yaml
+  # - sys_v1beta1_policy.yaml
+  - auth_v1beta1_kubernetesrole.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

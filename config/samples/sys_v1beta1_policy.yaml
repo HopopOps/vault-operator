@@ -6,4 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: policy-sample
 spec:
-  # TODO(user): Add fields here
+  policy: |
+    path "secret/data/foo" {
+      capabilities = [ "read" ]
+    }

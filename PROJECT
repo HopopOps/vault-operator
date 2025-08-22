@@ -19,4 +19,13 @@ resources:
   kind: Policy
   path: hopopops/vault-operator/api/sys/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: auth
+  kind: KubernetesRole
+  path: hopopops/vault-operator/api/auth/v1beta1
+  version: v1beta1
 version: "3"

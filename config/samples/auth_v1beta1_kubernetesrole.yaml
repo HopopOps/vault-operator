@@ -1,0 +1,15 @@
+apiVersion: auth.toolkit.vault.hopopops.com/v1beta1
+kind: KubernetesRole
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: kubernetesrole-sample
+spec:
+  tokenPolicies:
+    - policy-sample
+
+  boundServiceAccountNames:
+    - vault
+  boundServiceAccountNamespaces:
+    - default

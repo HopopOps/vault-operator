@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/sys.toolkit.vault.hopopops.com_policies.yaml
+- bases/auth.toolkit.vault.hopopops.com_kubernetesroles.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

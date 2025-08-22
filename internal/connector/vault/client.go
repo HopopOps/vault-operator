@@ -16,8 +16,9 @@ type Vault struct {
 
 type Parameters struct {
 	// connection parameters
-	Address string
-	Role    string
+	Address  string
+	AuthPath string
+	Role     string
 
 	// the locations / field names of our two secrets
 	TokenPath string
@@ -142,6 +143,7 @@ func (v *Vault) login(ctx context.Context) (*vaultapi.Secret, error) {
 	kubernetesAuth, err := vaultauth.NewKubernetesAuth(
 		v.parameters.Role,
 		vaultauth.WithServiceAccountTokenPath(v.parameters.TokenPath),
+		vaultauth.WithMountPath(v.parameters.AuthPath),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)

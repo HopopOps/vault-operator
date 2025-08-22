@@ -5,6 +5,32 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - sys.toolkit.vault.hopopops.com
   resources:
   - policies

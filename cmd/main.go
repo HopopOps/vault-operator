@@ -38,8 +38,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	authv1beta1 "hopopops/vault-operator/api/auth/v1beta1"
 	sysv1beta1 "hopopops/vault-operator/api/sys/v1beta1"
 	"hopopops/vault-operator/internal/connector/vault"
+	authcontroller "hopopops/vault-operator/internal/controller/auth"
 	syscontroller "hopopops/vault-operator/internal/controller/sys"
 	// +kubebuilder:scaffold:imports
 )
@@ -53,6 +55,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(sysv1beta1.AddToScheme(scheme))
+	utilruntime.Must(authv1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -84,8 +87,9 @@ func main() {
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 
-	var vaultAddr, vaultRole, vaultTokenPath string
+	var vaultAddr, vaultAuthPath, vaultRole, vaultTokenPath string
 	flag.StringVar(&vaultAddr, "vault-addr", "http://127.0.0.1:8200", "The address of the vault server.")
+	flag.StringVar(&vaultAuthPath, "vault-auth-endpoint", "kubernetes", "The endpoint of the kubernetes auth method.")
 	flag.StringVar(&vaultRole, "vault-role", "", "The vault role to use.")
 	flag.StringVar(&vaultTokenPath, "vault-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The path to the vault token.")
 
@@ -210,7 +214,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	v, _, err := vault.NewVaultKubernetesClient(context.Background(), &vault.Parameters{Address: vaultAddr, Role: vaultRole, TokenPath: vaultTokenPath})
+	v, _, err := vault.NewVaultKubernetesClient(context.Background(), &vault.Parameters{
+		Address:   vaultAddr,
+		AuthPath:  vaultAuthPath,
+		Role:      vaultRole,
+		TokenPath: vaultTokenPath})
 	if err != nil || v == nil {
 		setupLog.Error(err, "unable to create vault kubernetes client")
 		os.Exit(1)
@@ -222,6 +230,14 @@ func main() {
 		Vault:  v.Client,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Policy")
+		os.Exit(1)
+	}
+	if err := (&authcontroller.KubernetesRoleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v.Client,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "KubernetesRole")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
