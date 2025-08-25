@@ -88,9 +88,9 @@ func main() {
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
 
 	var vaultAddr, vaultAuthPath, vaultRole, vaultTokenPath string
-	flag.StringVar(&vaultAddr, "vault-addr", "http://127.0.0.1:8200", "The address of the vault server.")
+	flag.StringVar(&vaultAddr, "vault-addr", "http://vault.vault-system:8200", "The address of the vault server.")
 	flag.StringVar(&vaultAuthPath, "vault-auth-endpoint", "kubernetes", "The endpoint of the kubernetes auth method.")
-	flag.StringVar(&vaultRole, "vault-role", "", "The vault role to use.")
+	flag.StringVar(&vaultRole, "vault-role", "vault-operator", "The vault role to use.")
 	flag.StringVar(&vaultTokenPath, "vault-token-path", "/var/run/secrets/kubernetes.io/serviceaccount/token", "The path to the vault token.")
 
 	opts := zap.Options{

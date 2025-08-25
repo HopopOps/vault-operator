@@ -1,0 +1,734 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+    control-plane: controller-manager
+  name: vault-operator-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: kubernetesroles.auth.toolkit.vault.hopopops.com
+spec:
+  group: auth.toolkit.vault.hopopops.com
+  names:
+    kind: KubernetesRole
+    listKind: KubernetesRoleList
+    plural: kubernetesroles
+    singular: kubernetesrole
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: KubernetesRole is the Schema for the kubernetesroles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of KubernetesRole
+            properties:
+              aliasNameSource:
+                default: serviceaccount_uid
+                description: aliasNameSource configures how identity aliases are generated.
+                  Valid choices are `serviceaccount_uid` and `serviceaccount_name`.
+                enum:
+                - serviceaccount_uid
+                - serviceaccount_name
+                type: string
+              audience:
+                description: audience defines the audience claim to verify in the
+                  JWT. Will be required in Vault 1.21+.
+                type: string
+              authPath:
+                default: kubernetes
+                description: authPath defines the remote path in Vault where the auth
+                  method is enabled.
+                type: string
+                x-kubernetes-validations:
+                - message: AuthPath is immutable
+                  rule: self == oldSelf
+              boundServiceAccountNames:
+                description: boundServiceAccountNames defines the list of service
+                  account names able to access this role. If set to "*" all names
+                  are allowed.
+                items:
+                  type: string
+                type: array
+              boundServiceAccountNamespaces:
+                description: boundServiceAccountNamespaces defines the list of namespaces
+                  allowed to access this role. If set to "*" all namespaces are allowed.
+                items:
+                  type: string
+                type: array
+              tokenBoundCIDRs:
+                description: tokenBoundCIDRs defines the list of CIDR blocks; if set,
+                  specifies blocks of IP addresses which can authenticate successfully,
+                  and ties the resulting token to these blocks as well.
+                items:
+                  type: string
+                type: array
+              tokenExplicitMaxTTL:
+                description: tokenExplicitMaxTTL if set, will encode an explicit max
+                  TTL onto the token. This is a hard cap even if tokenTTL and tokenMaxTTL
+                  would otherwise allow a renewal.
+                minimum: 0
+                type: integer
+              tokenMaxTTL:
+                description: tokenMaxTTL defines the maximum lifetime for generated
+                  tokens. This current value of this will be referenced at renewal
+                  time.
+                minimum: 0
+                type: integer
+              tokenNoDefaultPolicy:
+                description: tokenNoDefaultPolicy if set, the default policy will
+                  not be set on generated tokens; otherwise it will be added to the
+                  policies set in tokenPolicies.
+                type: boolean
+              tokenNumUses:
+                description: tokenNumUses defines the maximum number of times a generated
+                  token may be used (within its lifetime); 0 means unlimited. If you
+                  require the token to have the ability to create child tokens, you
+                  will need to set this value to 0.
+                minimum: 0
+                type: integer
+              tokenPeriod:
+                description: tokenPeriod defines the maximum allowed period value
+                  when a periodic token is requested from this role.
+                type: integer
+              tokenPolicies:
+                description: tokenPolicies defines the list of token policies to encode
+                  onto generated tokens. Depending on the auth method, this list may
+                  be supplemented by user/group/other values.
+                items:
+                  type: string
+                type: array
+              tokenTTL:
+                description: tokenTTL defines the incremental lifetime for generated
+                  tokens. This current value of this will be referenced at renewal
+                  time.
+                minimum: 0
+                type: integer
+              tokenType:
+                description: tokenType defines the type of token that should be generated.
+                  Can be service, batch, or default to use the mount's tuned default.
+                enum:
+                - service
+                - batch
+                - default
+                - default-service
+                - default-batch
+                type: string
+            required:
+            - boundServiceAccountNames
+            type: object
+          status:
+            description: status defines the observed state of KubernetesRole
+            properties:
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: policies.sys.toolkit.vault.hopopops.com
+spec:
+  group: sys.toolkit.vault.hopopops.com
+  names:
+    kind: Policy
+    listKind: PolicyList
+    plural: policies
+    singular: policy
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Policy is the Schema for the policies API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of Policy
+            properties:
+              policy:
+                description: policy specifies the policy document.
+                type: string
+            required:
+            - policy
+            type: object
+          status:
+            description: status defines the observed state of Policy
+            properties:
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-controller-manager
+  namespace: vault-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-leader-election-role
+  namespace: vault-operator-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-kubernetesrole-admin-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles
+  verbs:
+  - '*'
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-kubernetesrole-editor-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-kubernetesrole-viewer-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-operator-manager-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - kubernetesroles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-operator-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-sys-policy-admin-role
+rules:
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies
+  verbs:
+  - '*'
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-sys-policy-editor-role
+rules:
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-sys-policy-viewer-role
+rules:
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - sys.toolkit.vault.hopopops.com
+  resources:
+  - policies/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-leader-election-rolebinding
+  namespace: vault-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: vault-operator-controller-manager
+  namespace: vault-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: vault-operator-controller-manager
+  namespace: vault-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-operator-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vault-operator-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: vault-operator-controller-manager
+  namespace: vault-operator-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+    control-plane: controller-manager
+  name: vault-operator-controller-manager-metrics-service
+  namespace: vault-operator-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app.kubernetes.io/name: vault-operator
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+    control-plane: controller-manager
+  name: vault-operator-controller-manager
+  namespace: vault-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vault-operator
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/name: vault-operator
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --metrics-bind-address=:8443
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        command:
+        - /manager
+        image: quay.io/hopopops/vault-operator:latest
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports: []
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        volumeMounts: []
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: vault-operator-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes: []

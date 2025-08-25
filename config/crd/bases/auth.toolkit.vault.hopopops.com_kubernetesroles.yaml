@@ -83,12 +83,14 @@ spec:
                 description: tokenExplicitMaxTTL if set, will encode an explicit max
                   TTL onto the token. This is a hard cap even if tokenTTL and tokenMaxTTL
                   would otherwise allow a renewal.
-                type: string
+                minimum: 0
+                type: integer
               tokenMaxTTL:
                 description: tokenMaxTTL defines the maximum lifetime for generated
                   tokens. This current value of this will be referenced at renewal
                   time.
-                type: string
+                minimum: 0
+                type: integer
               tokenNoDefaultPolicy:
                 description: tokenNoDefaultPolicy if set, the default policy will
                   not be set on generated tokens; otherwise it will be added to the
@@ -104,7 +106,7 @@ spec:
               tokenPeriod:
                 description: tokenPeriod defines the maximum allowed period value
                   when a periodic token is requested from this role.
-                type: string
+                type: integer
               tokenPolicies:
                 description: tokenPolicies defines the list of token policies to encode
                   onto generated tokens. Depending on the auth method, this list may
@@ -116,7 +118,8 @@ spec:
                 description: tokenTTL defines the incremental lifetime for generated
                   tokens. This current value of this will be referenced at renewal
                   time.
-                type: string
+                minimum: 0
+                type: integer
               tokenType:
                 description: tokenType defines the type of token that should be generated.
                   Can be service, batch, or default to use the mount's tuned default.

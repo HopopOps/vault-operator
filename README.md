@@ -1,8 +1,18 @@
 # vault-operator
-// TODO(user): Add simple overview of use/purpose
+A basic vault operator enabling the user to create custom vault resources such as policies and roles for kubernetes 
+authentication engine.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+This is a basic Hashicorp Vault operator enabling the user to create custom vault resources such as policies and roles 
+for kubernetes authentication engine. It was written in order to be a part of GitOps pipelines making use of tools 
+like `external-secrets-operator` where one as to write and maintain a lot of vault policies and auth engine role. 
+Being able to store those parts of a configuration next to an app bundle using them is a nice QoL improvement.
+
+ This project is an exercise to demonstrate how simple it can be to augment kubernetes API thanks to the operator 
+ pattern. The creator needed a simpler alternative to 
+ [redhat-cop/vault-config-operator](https://github.com/redhat-cop/vault-config-operator), a project about 
+ configuring vault from CRD. `vault-config-operator` already implement a large portion of Hashicorp Vault's API, 
+ looks well maintained and will most likely fit your needs.
 
 ## Getting Started
 
@@ -16,7 +26,7 @@
 **Build and push your image to the location specified by `IMG`:**
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/vault-operator:tag
+make docker-build docker-push IMG=quay.io/hopopops/vault-operator:tag
 ```
 
 **NOTE:** This image ought to be published in the personal registry you specified.
@@ -32,7 +42,7 @@ make install
 **Deploy the Manager to the cluster with the image specified by `IMG`:**
 
 ```sh
-make deploy IMG=<some-registry>/vault-operator:tag
+make deploy IMG=quay.io/hopopops/vault-operator:tag
 ```
 
 > **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
@@ -75,7 +85,7 @@ Following the options to release and provide this solution to the users.
 1. Build the installer for the image built and published in the registry:
 
 ```sh
-make build-installer IMG=<some-registry>/vault-operator:tag
+make build-installer IMG=quay.io/hopopops/vault-operator:tag
 ```
 
 **NOTE:** The makefile target mentioned above generates an 'install.yaml'
@@ -85,11 +95,24 @@ dependencies.
 
 2. Using the installer
 
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
+User can create a Kustomization to edit the parameters then just run 'kubectl apply -k <PATH to KUSTOMIZATION 
+DIRECTORY>' to install the project, i.e.:
 
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/vault-operator/<tag or branch>/dist/install.yaml
+```yaml
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - https://raw.githubusercontent.com/hopopops/vault-operator/main/dist/install.yaml
+
+patches:
+  - patch: |
+      - op: add
+        path: /spec/template/spec/containers/0/args/-
+        value: --vault-addr=https://vault.hopopops.com
+    target:
+      kind: Deployment
+      name: vault-operator-controller-manager
 ```
 
 ### By providing a Helm Chart
