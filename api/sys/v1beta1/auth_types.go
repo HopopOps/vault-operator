@@ -89,6 +89,8 @@ type AuthStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	Accessor string `json:"accessor,omitempty"`
 }
 
 // +kubebuilder:object:root=true

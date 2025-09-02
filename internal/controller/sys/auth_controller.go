@@ -79,7 +79,7 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if len(auth.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, auth); err != nil {
-			log.Error(err, "Failed to update Auth status")
+			log.Error(err, "Failed to create Auth status")
 			return ctrl.Result{}, err
 		}
 
@@ -122,21 +122,31 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	// Create, do not allow update
-	if err := r.createVaultAuth(ctx, auth); err != nil {
-		log.Error(err, "Failed to create Auth")
-		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create auth engine in Vault"})
+	if auth.Status.Accessor == "" {
+		if err := r.createVaultAuth(ctx, auth); err != nil {
+			log.Error(err, "Failed to create Auth")
+			meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create auth engine in Vault"})
+			if err := r.Status().Update(ctx, auth); err != nil {
+				log.Error(err, "Failed to update Auth status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+
+		ae, err := r.Vault.Sys().GetAuthWithContext(ctx, auth.Name)
+		if err != nil {
+			log.Error(err, "Failed to get auth engine from Vault")
+			return ctrl.Result{}, err
+		}
+
+		// Set accessor for reference
+		auth.Status.Accessor = ae.Accessor
+		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully created auth engine in Vault"})
 		if err := r.Status().Update(ctx, auth); err != nil {
 			log.Error(err, "Failed to update Auth status")
 			return ctrl.Result{}, err
 		}
-
-		return ctrl.Result{}, err
-	}
-
-	meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully created auth engine in Vault"})
-	if err := r.Status().Update(ctx, auth); err != nil {
-		log.Error(err, "Failed to create Auth status")
-		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
