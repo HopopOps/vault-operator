@@ -40,6 +40,7 @@ spec:
             description: spec defines the desired state of Auth
             properties:
               description:
+                default: ""
                 type: string
                 x-kubernetes-validations:
                 - message: Description is immutable

@@ -48,6 +48,7 @@ spec:
             description: spec defines the desired state of Auth
             properties:
               description:
+                default: ""
                 type: string
                 x-kubernetes-validations:
                 - message: Description is immutable
@@ -890,7 +891,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: quay.io/hopopops/vault-operator:0.0.1
+        image: quay.io/hopopops/vault-operator:0.0.2
         livenessProbe:
           httpGet:
             path: /healthz

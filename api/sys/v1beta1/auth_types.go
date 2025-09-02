@@ -61,6 +61,7 @@ type AuthSpec struct {
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
 	// +optional
+	// +kubebuilder:default=""
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Description is immutable"
 	Description *string `json:"description,omitempty"`
 

@@ -18,7 +18,6 @@ package sys
 
 import (
 	"context"
-	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -122,39 +121,22 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	// Create or update
-	if a, err := r.fetchVaultAuth(ctx, auth); err != nil {
-		log.Error(err, "Failed to fetch Auth")
-		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToFetch", Message: "Failed to fetch auth from Vault"})
+	// Create, do not allow update
+	if err := r.createVaultAuth(ctx, auth); err != nil {
+		log.Error(err, "Failed to create Auth")
+		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create auth engine in Vault"})
 		if err := r.Status().Update(ctx, auth); err != nil {
 			log.Error(err, "Failed to update Auth status")
 			return ctrl.Result{}, err
 		}
 
 		return ctrl.Result{}, err
-	} else {
-		if !a {
-			if err := r.createVaultAuth(ctx, auth); err != nil {
-				log.Error(err, "Failed to create Auth")
-				meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToUpdate", Message: "Failed to push auth to Vault"})
-				if err := r.Status().Update(ctx, auth); err != nil {
-					log.Error(err, "Failed to update Auth status")
-					return ctrl.Result{}, err
-				}
+	}
 
-				return ctrl.Result{}, err
-			}
-
-			meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully pushed auth to Vault"})
-			if err := r.Status().Update(ctx, auth); err != nil {
-				log.Error(err, "Failed to create Auth status")
-				return ctrl.Result{}, err
-			}
-		} else {
-			err := fmt.Errorf("auth already configured")
-			log.Error(err, "Auth already exists")
-			return ctrl.Result{}, err
-		}
+	meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully created auth engine in Vault"})
+	if err := r.Status().Update(ctx, auth); err != nil {
+		log.Error(err, "Failed to create Auth status")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
@@ -162,19 +144,6 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 func (r *AuthReconciler) deleteVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
 	return r.Vault.Sys().DisableAuthWithContext(ctx, auth.Name)
-}
-
-func (r *AuthReconciler) fetchVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) (bool, error) {
-	ae, err := r.Vault.Sys().GetAuthWithContext(ctx, auth.Name)
-	if err != nil {
-		return false, err
-	}
-
-	if ae == nil {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 func (r *AuthReconciler) createVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
