@@ -104,6 +104,7 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if controllerutil.ContainsFinalizer(policy, policyFinalizer) {
 			// Delete managed resources for this Policy
 			if err := r.deleteVaultPolicy(ctx, policy); err != nil {
+				log.Error(err, "Failed to delete Policy")
 				return ctrl.Result{}, err
 			}
 
@@ -119,6 +120,7 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	// Create or update
 	if p, err := r.fetchVaultPolicy(ctx, policy); err != nil {
+		log.Error(err, "Failed to fetch Policy")
 		meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionFalse, Reason: "FailedToFetch", Message: "Failed to fetch policy from Vault"})
 		if err := r.Status().Update(ctx, policy); err != nil {
 			log.Error(err, "Failed to update Policy status")
@@ -127,10 +129,9 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 		return ctrl.Result{}, err
 	} else {
-		changed := p == nil || p.Name != policy.Name || p.Policy != *policy.Spec.Policy
-
-		if changed {
+		if p == nil || p.Name != policy.Name || p.Policy != *policy.Spec.Policy {
 			if err := r.updateVaultPolicy(ctx, policy); err != nil {
+				log.Error(err, "Failed to update Policy")
 				meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionFalse, Reason: "FailedToUpdate", Message: "Failed to push policy to Vault"})
 				if err := r.Status().Update(ctx, policy); err != nil {
 					log.Error(err, "Failed to update Policy status")

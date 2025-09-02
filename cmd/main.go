@@ -240,6 +240,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "KubernetesRole")
 		os.Exit(1)
 	}
+	if err := (&syscontroller.AuthReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v.Client,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Auth")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {

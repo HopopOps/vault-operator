@@ -68,22 +68,22 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	role := &authv1beta1.KubernetesRole{}
 	if err := r.Get(ctx, req.NamespacedName, role); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Info("KubernetesRole resource not found. Ignoring since object must be deleted", "name", req.NamespacedName)
+			log.Info("KubernetesRole resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
-		log.Error(err, "Failed to get KubernetesRole", "name", req.NamespacedName)
+		log.Error(err, "Failed to get KubernetesRole")
 		return ctrl.Result{}, err
 	}
 
 	if len(role.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&role.Status.Conditions, metav1.Condition{Type: typeConfiguredRole, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, role); err != nil {
-			log.Error(err, "Failed to update KubernetesRole status", "name", req.NamespacedName)
+			log.Error(err, "Failed to update KubernetesRole status")
 			return ctrl.Result{}, err
 		}
 
 		if err := r.Get(ctx, req.NamespacedName, role); err != nil {
-			log.Error(err, "Failed to re-fetch KubernetesRole", "name", req.NamespacedName)
+			log.Error(err, "Failed to re-fetch KubernetesRole")
 			return ctrl.Result{}, err
 		}
 	}
@@ -93,12 +93,12 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			// Initialize finalizer
 			controllerutil.AddFinalizer(role, roleFinalizer)
 			if err := r.Update(ctx, role); err != nil {
-				log.Error(err, "Failed to add finalizer to KubernetesRole", "name", req.NamespacedName)
+				log.Error(err, "Failed to add finalizer to KubernetesRole")
 				return ctrl.Result{}, err
 			}
 
 			if err := r.Get(ctx, req.NamespacedName, role); err != nil {
-				log.Error(err, "Failed to re-fetch KubernetesRole", "name", req.NamespacedName)
+				log.Error(err, "Failed to re-fetch KubernetesRole")
 				return ctrl.Result{}, err
 			}
 		}
@@ -106,13 +106,13 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if controllerutil.ContainsFinalizer(role, roleFinalizer) {
 			// Delete managed resources for this KubernetesRole
 			if err := r.deleteVaultKubernetesRole(ctx, role); err != nil {
-				log.Error(err, "Failed to delete KubernetesRole", "name", req.NamespacedName)
+				log.Error(err, "Failed to delete KubernetesRole")
 				return ctrl.Result{}, err
 			}
 
 			controllerutil.RemoveFinalizer(role, roleFinalizer)
 			if err := r.Update(ctx, role); err != nil {
-				log.Error(err, "Failed to remove finalizer from KubernetesRole", "name", req.NamespacedName)
+				log.Error(err, "Failed to remove finalizer from KubernetesRole")
 				return ctrl.Result{}, err
 			}
 		}
@@ -122,10 +122,10 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Create or update
 	if kr, err := r.fetchVaultKubernetesRole(ctx, role); err != nil {
-		log.Error(err, "Failed to fetch KubernetesRole", "name", req.NamespacedName)
+		log.Error(err, "Failed to fetch KubernetesRole")
 		meta.SetStatusCondition(&role.Status.Conditions, metav1.Condition{Type: typeConfiguredRole, Status: metav1.ConditionFalse, Reason: "FailedToFetch", Message: "Failed to fetch kubernetes auth engine role from Vault"})
 		if err := r.Status().Update(ctx, role); err != nil {
-			log.Error(err, "Failed to update KubernetesRole status", "name", req.NamespacedName)
+			log.Error(err, "Failed to update KubernetesRole status")
 			return ctrl.Result{}, err
 		}
 
@@ -133,10 +133,10 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	} else {
 		if kr == nil || kr.IsDifferentFromSpec(&role.Spec) {
 			if err := r.updateVaultKubernetesRole(ctx, role); err != nil {
-				log.Error(err, "Failed to update KubernetesRole", "name", role.Name)
+				log.Error(err, "Failed to update KubernetesRole")
 				meta.SetStatusCondition(&role.Status.Conditions, metav1.Condition{Type: typeConfiguredRole, Status: metav1.ConditionFalse, Reason: "FailedToUpdate", Message: "Failed to push kubernetes auth engine role to Vault"})
 				if err := r.Status().Update(ctx, role); err != nil {
-					log.Error(err, "Failed to update KubernetesRole status", "name", role.Name)
+					log.Error(err, "Failed to update KubernetesRole status")
 					return ctrl.Result{}, err
 				}
 
@@ -145,7 +145,7 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 			meta.SetStatusCondition(&role.Status.Conditions, metav1.Condition{Type: typeConfiguredRole, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully pushed kubernetes auth engine role to Vault"})
 			if err := r.Status().Update(ctx, role); err != nil {
-				log.Error(err, "Failed to update KubernetesRole status", "name", role.Name)
+				log.Error(err, "Failed to update KubernetesRole status")
 				return ctrl.Result{}, err
 			}
 		}

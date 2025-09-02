@@ -33,6 +33,7 @@ rules:
 - apiGroups:
   - sys.toolkit.vault.hopopops.com
   resources:
+  - auths
   - policies
   verbs:
   - create
@@ -45,12 +46,14 @@ rules:
 - apiGroups:
   - sys.toolkit.vault.hopopops.com
   resources:
+  - auths/finalizers
   - policies/finalizers
   verbs:
   - update
 - apiGroups:
   - sys.toolkit.vault.hopopops.com
   resources:
+  - auths/status
   - policies/status
   verbs:
   - get
