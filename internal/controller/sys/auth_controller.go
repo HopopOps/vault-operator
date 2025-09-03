@@ -18,6 +18,7 @@ package sys
 
 import (
 	"context"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -76,36 +77,10 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
-	if len(auth.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-		if err := r.Status().Update(ctx, auth); err != nil {
-			log.Error(err, "Failed to create Auth status")
-			return ctrl.Result{}, err
-		}
-
-		if err := r.Get(ctx, req.NamespacedName, auth); err != nil {
-			log.Error(err, "Failed to re-fetch Auth")
-			return ctrl.Result{}, err
-		}
-	}
-
-	if auth.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(auth, authFinalizer) {
-			// Initialize finalizer
-			controllerutil.AddFinalizer(auth, authFinalizer)
-			if err := r.Update(ctx, auth); err != nil {
-				log.Error(err, "Failed to add finalizer to Auth")
-				return ctrl.Result{}, err
-			}
-
-			if err := r.Get(ctx, req.NamespacedName, auth); err != nil {
-				log.Error(err, "Failed to re-fetch Auth")
-				return ctrl.Result{}, err
-			}
-		}
-	} else {
+	// Auth Deletion
+	isAuthMarkedToBeDeleted := auth.GetDeletionTimestamp() != nil
+	if isAuthMarkedToBeDeleted {
 		if controllerutil.ContainsFinalizer(auth, authFinalizer) {
-			// Delete managed resources for this Auth
 			if err := r.deleteVaultAuth(ctx, auth); err != nil {
 				log.Error(err, "Failed to delete Auth")
 				return ctrl.Result{}, err
@@ -117,8 +92,21 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, err
 			}
 		}
-
 		return ctrl.Result{}, nil
+	}
+
+	// Auth Initialization
+	if !controllerutil.ContainsFinalizer(auth, authFinalizer) {
+		controllerutil.AddFinalizer(auth, authFinalizer)
+		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
+		if err := r.Update(ctx, auth); err != nil {
+			log.Error(err, "Failed to initialize Auth status")
+			return ctrl.Result{}, err
+		}
+		//if err := r.Get(ctx, req.NamespacedName, auth); err != nil {
+		//	log.Error(err, "Failed to re-fetch Auth")
+		//	return ctrl.Result{}, err
+		//}
 	}
 
 	// Create, do not allow update
@@ -153,11 +141,11 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *AuthReconciler) deleteVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
-	return r.Vault.Sys().DisableAuthWithContext(ctx, auth.Name)
+	return r.Vault.Sys().DisableAuthWithContext(ctx, fmt.Sprintf("%s/", auth.Name))
 }
 
 func (r *AuthReconciler) createVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
-	return r.Vault.Sys().EnableAuthWithOptionsWithContext(ctx, auth.Name, &vaultapi.EnableAuthOptions{
+	return r.Vault.Sys().EnableAuthWithOptionsWithContext(ctx, fmt.Sprintf("%s/", auth.Name), &vaultapi.EnableAuthOptions{
 		Type:        *auth.Spec.Type,
 		Description: *auth.Spec.Description,
 	})
