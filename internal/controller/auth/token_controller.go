@@ -55,7 +55,7 @@ type TokenReconciler struct {
 // +kubebuilder:rbac:groups=auth.toolkit.vault.hopopops.com,resources=tokens,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=auth.toolkit.vault.hopopops.com,resources=tokens/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=auth.toolkit.vault.hopopops.com,resources=tokens/finalizers,verbs=update
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;delete
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -116,20 +116,23 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if token.Status.Accessor == "" {
-		if t, err := r.Vault.Auth().Token().Create(&vaultapi.TokenCreateRequest{
+		tcr := &vaultapi.TokenCreateRequest{
+			ID:              token.Spec.ID,
 			Policies:        token.Spec.Policies,
 			Metadata:        token.Spec.Meta,
 			TTL:             token.Spec.TTL,
+			NoParent:        token.Spec.NoParent,
 			ExplicitMaxTTL:  token.Spec.ExplicitMaxTTL,
 			Period:          token.Spec.Period,
-			NoParent:        token.Spec.NoParent,
 			NoDefaultPolicy: token.Spec.NoDefaultPolicy,
 			DisplayName:     fmt.Sprintf("%s/%s", token.Namespace, token.Name),
 			NumUses:         token.Spec.NumUses,
 			Renewable:       &token.Spec.Renewable,
 			Type:            token.Spec.Type,
 			EntityAlias:     token.Spec.EntityAlias,
-		}); err != nil {
+		}
+
+		if t, err := r.Vault.Auth().Token().CreateWithContext(ctx, tcr); err != nil {
 			log.Error(err, "Failed to create Token")
 			meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create token engine in Vault"})
 			if err := r.Status().Update(ctx, token); err != nil {
@@ -225,10 +228,6 @@ func (r *TokenReconciler) createK8sSecret(ctx context.Context, token *authv1beta
 	}
 
 	return apierrors.NewAlreadyExists(corev1.Resource("secrets"), secret.Name)
-}
-
-func (r *TokenReconciler) deleteVaultToken(ctx context.Context, token *authv1beta1.Token) error {
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

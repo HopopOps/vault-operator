@@ -12,6 +12,10 @@ rules:
   - create
   - delete
   - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - auth.toolkit.vault.hopopops.com
   resources:

@@ -43,6 +43,10 @@ type TokenSpec struct {
 	// +required
 	Target TokenTarget `json:"target"`
 
+	// id defines the ID of the client token. Can only be specified by a root token. The ID provided may not contain a . character. Otherwise, the token ID is a randomly generated value.
+	// +optional
+	ID string `json:"id,omitempty"`
+
 	// roleName defines the name of the token role.
 	// +optional
 	RoleName string `json:"roleName,omitempty"`
