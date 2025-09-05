@@ -50,16 +50,13 @@ spec:
               description:
                 default: ""
                 type: string
-                x-kubernetes-validations:
-                - message: Description is immutable
-                  rule: self == oldSelf
               type:
                 default: kubernetes
                 type: string
-                x-kubernetes-validations:
-                - message: Type is immutable
-                  rule: self == oldSelf
             type: object
+            x-kubernetes-validations:
+            - message: AuthSpec is immutable
+              rule: self == oldSelf
           status:
             description: status defines the observed state of Auth
             properties:
@@ -446,6 +443,204 @@ spec:
     subresources:
       status: {}
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: tokens.auth.toolkit.vault.hopopops.com
+spec:
+  group: auth.toolkit.vault.hopopops.com
+  names:
+    kind: Token
+    listKind: TokenList
+    plural: tokens
+    singular: token
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Token is the Schema for the tokens API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of Token
+            properties:
+              entityAlias:
+                description: entityAlias defines the name of the entity alias to associate
+                  with during token creation. Only works in combination with roleName
+                  argument and used entity alias must be listed in allowed_entity_aliases.
+                type: string
+              explicitMaxTTL:
+                description: explicitMaxTTL if set, the token will have an explicit
+                  max TTL set upon it. This maximum token TTL cannot be changed later,
+                  and unlike with normal tokens, updates to the system/mount max TTL
+                  value will have no effect at renewal time.
+                type: string
+              meta:
+                additionalProperties:
+                  type: string
+                description: meta defines a map of string to string valued metadata.
+                  This is passed through to the audit devices.
+                type: object
+              noDefaultPolicy:
+                description: noDefaultPolicy if true the default policy will not be
+                  contained in this token's policy set.
+                type: boolean
+              noParent:
+                description: noParent when set to true, the token created will not
+                  have a parent. This argument only has effect if used by a root or
+                  sudo caller.
+                type: boolean
+              numUses:
+                description: numUses defines the maximum uses for the given token.
+                  This can be used to create a one-time-token or limited use token.
+                  The value of 0 has no limit to the number of uses.
+                minimum: 0
+                type: integer
+              period:
+                description: period if specified, the token will be periodic; it will
+                  have no maximum TTL (unless an "explicitMaxTTL" is also set) but
+                  every renewal will use the given period. Requires a root token or
+                  one with the sudo capability.
+                type: string
+              policies:
+                description: policies defines a list of policies for the token. This
+                  must be a subset of the policies belonging to the token making the
+                  request, unless the calling token is root or contains sudo capabilities.
+                items:
+                  type: string
+                type: array
+              renewable:
+                default: true
+                description: renewable set to false to disable the ability of the
+                  token to be renewed past its initial TTL. Setting the value to true
+                  will allow the token to be renewable up to the system/mount maximum
+                  TTL.
+                type: boolean
+              roleName:
+                description: roleName defines the name of the token role.
+                type: string
+              target:
+                properties:
+                  deletionPolicy:
+                    default: Retain
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              ttl:
+                description: ttl defines the TTL period of the token, provided as
+                  "1h", where hour is the largest suffix. If not provided, the token
+                  is valid for the default lease TTL, or indefinitely if the root
+                  policy is used.
+                type: string
+              type:
+                description: type defines the token type. Can be "batch" or "service".
+                  Defaults to the type specified by the role configuration named by
+                  roleName.
+                enum:
+                - batch
+                - service
+                type: string
+            required:
+            - target
+            type: object
+            x-kubernetes-validations:
+            - message: TokenSpec is immutable
+              rule: self == oldSelf
+          status:
+            description: status defines the observed state of Token
+            properties:
+              accessor:
+                type: string
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -570,12 +765,92 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: vault-operator-manager-role
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-token-admin-role
 rules:
 - apiGroups:
   - auth.toolkit.vault.hopopops.com
   resources:
+  - tokens
+  verbs:
+  - '*'
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - tokens/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-token-editor-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - tokens
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - tokens/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vault-operator
+  name: vault-operator-auth-token-viewer-role
+rules:
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - tokens
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
+  - tokens/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vault-operator-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+- apiGroups:
+  - auth.toolkit.vault.hopopops.com
+  resources:
   - kubernetesroles
+  - tokens
   verbs:
   - create
   - delete
@@ -588,12 +863,14 @@ rules:
   - auth.toolkit.vault.hopopops.com
   resources:
   - kubernetesroles/finalizers
+  - tokens/finalizers
   verbs:
   - update
 - apiGroups:
   - auth.toolkit.vault.hopopops.com
   resources:
   - kubernetesroles/status
+  - tokens/status
   verbs:
   - get
   - patch
@@ -893,7 +1170,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: quay.io/hopopops/vault-operator:0.0.7
+        image: quay.io/hopopops/vault-operator:0.1.0
         livenessProbe:
           httpGet:
             path: /healthz

@@ -103,10 +103,6 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			log.Error(err, "Failed to initialize Auth status")
 			return ctrl.Result{}, err
 		}
-		//if err := r.Get(ctx, req.NamespacedName, auth); err != nil {
-		//	log.Error(err, "Failed to re-fetch Auth")
-		//	return ctrl.Result{}, err
-		//}
 	}
 
 	// Create, do not allow update

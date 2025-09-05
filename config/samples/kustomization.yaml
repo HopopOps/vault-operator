@@ -3,4 +3,5 @@ resources:
   # - sys_v1beta1_policy.yaml
   - auth_v1beta1_kubernetesrole.yaml
 - sys_v1beta1_auth.yaml
+- auth_v1beta1_token.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

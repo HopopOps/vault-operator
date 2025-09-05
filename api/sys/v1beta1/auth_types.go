@@ -62,20 +62,16 @@ type AuthSpec struct {
 
 	// +optional
 	// +kubebuilder:default=""
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Description is immutable"
 	Description *string `json:"description,omitempty"`
 
 	// +kubebuilder:default="kubernetes"
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Type is immutable"
 	Type *string `json:"type,omitempty"`
 
 	//// +kubebuilder:default=false
-	//// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Local is immutable"
 	//// +optional
 	//Local bool `json:"local,omitempty"`
 	//
 	//// +kubebuilder:default=false
-	//// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="SealWrap is immutable"
 	//// +optional
 	//SealWrap bool `json:"sealWrap,omitempty"`
 	//
@@ -89,8 +85,7 @@ type AuthStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
-	Accessor string `json:"accessor,omitempty"`
+	Accessor   string             `json:"accessor,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -105,6 +100,7 @@ type Auth struct {
 	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
 
 	// spec defines the desired state of Auth
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="AuthSpec is immutable"
 	// +required
 	Spec AuthSpec `json:"spec"`
 

@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: auths.sys.toolkit.vault.hopopops.com
+  name: tokens.auth.toolkit.vault.hopopops.com
 spec:
-  group: sys.toolkit.vault.hopopops.com
+  group: auth.toolkit.vault.hopopops.com
   names:
-    kind: Auth
-    listKind: AuthList
-    plural: auths
-    singular: auth
+    kind: Token
+    listKind: TokenList
+    plural: tokens
+    singular: token
   scope: Namespaced
   versions:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: Auth is the Schema for the auths API
+        description: Token is the Schema for the tokens API
         properties:
           apiVersion:
             description: |-
@@ -37,20 +37,98 @@ spec:
           metadata:
             type: object
           spec:
-            description: spec defines the desired state of Auth
+            description: spec defines the desired state of Token
             properties:
-              description:
-                default: ""
+              entityAlias:
+                description: entityAlias defines the name of the entity alias to associate
+                  with during token creation. Only works in combination with roleName
+                  argument and used entity alias must be listed in allowed_entity_aliases.
+                type: string
+              explicitMaxTTL:
+                description: explicitMaxTTL if set, the token will have an explicit
+                  max TTL set upon it. This maximum token TTL cannot be changed later,
+                  and unlike with normal tokens, updates to the system/mount max TTL
+                  value will have no effect at renewal time.
+                type: string
+              meta:
+                additionalProperties:
+                  type: string
+                description: meta defines a map of string to string valued metadata.
+                  This is passed through to the audit devices.
+                type: object
+              noDefaultPolicy:
+                description: noDefaultPolicy if true the default policy will not be
+                  contained in this token's policy set.
+                type: boolean
+              noParent:
+                description: noParent when set to true, the token created will not
+                  have a parent. This argument only has effect if used by a root or
+                  sudo caller.
+                type: boolean
+              numUses:
+                description: numUses defines the maximum uses for the given token.
+                  This can be used to create a one-time-token or limited use token.
+                  The value of 0 has no limit to the number of uses.
+                minimum: 0
+                type: integer
+              period:
+                description: period if specified, the token will be periodic; it will
+                  have no maximum TTL (unless an "explicitMaxTTL" is also set) but
+                  every renewal will use the given period. Requires a root token or
+                  one with the sudo capability.
+                type: string
+              policies:
+                description: policies defines a list of policies for the token. This
+                  must be a subset of the policies belonging to the token making the
+                  request, unless the calling token is root or contains sudo capabilities.
+                items:
+                  type: string
+                type: array
+              renewable:
+                default: true
+                description: renewable set to false to disable the ability of the
+                  token to be renewed past its initial TTL. Setting the value to true
+                  will allow the token to be renewable up to the system/mount maximum
+                  TTL.
+                type: boolean
+              roleName:
+                description: roleName defines the name of the token role.
+                type: string
+              target:
+                properties:
+                  deletionPolicy:
+                    default: Retain
+                    enum:
+                    - Retain
+                    - Delete
+                    type: string
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+              ttl:
+                description: ttl defines the TTL period of the token, provided as
+                  "1h", where hour is the largest suffix. If not provided, the token
+                  is valid for the default lease TTL, or indefinitely if the root
+                  policy is used.
                 type: string
               type:
-                default: kubernetes
+                description: type defines the token type. Can be "batch" or "service".
+                  Defaults to the type specified by the role configuration named by
+                  roleName.
+                enum:
+                - batch
+                - service
                 type: string
+            required:
+            - target
             type: object
             x-kubernetes-validations:
-            - message: AuthSpec is immutable
+            - message: TokenSpec is immutable
               rule: self == oldSelf
           status:
-            description: status defines the observed state of Auth
+            description: status defines the observed state of Token
             properties:
               accessor:
                 type: string
