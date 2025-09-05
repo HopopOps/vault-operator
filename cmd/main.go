@@ -251,6 +251,7 @@ func main() {
 	if err := (&authcontroller.TokenReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Vault:  v.Client,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Token")
 		os.Exit(1)
