@@ -483,6 +483,10 @@ spec:
           spec:
             description: spec defines the desired state of Token
             properties:
+              displayName:
+                default: token
+                description: displayName defines the display name of the token.
+                type: string
               entityAlias:
                 description: entityAlias defines the name of the entity alias to associate
                   with during token creation. Only works in combination with roleName
@@ -493,6 +497,12 @@ spec:
                   max TTL set upon it. This maximum token TTL cannot be changed later,
                   and unlike with normal tokens, updates to the system/mount max TTL
                   value will have no effect at renewal time.
+                type: string
+              id:
+                description: id defines the ID of the client token. Can only be specified
+                  by a root token. The ID provided may not contain a . character.
+                  Otherwise, the token ID is a randomly generated value.
+                pattern: ^[^.]*$
                 type: string
               meta:
                 additionalProperties:
@@ -1170,7 +1180,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: quay.io/hopopops/vault-operator:0.1.2
+        image: quay.io/hopopops/vault-operator:0.1.3
         livenessProbe:
           httpGet:
             path: /healthz

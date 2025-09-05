@@ -43,6 +43,11 @@ type TokenSpec struct {
 	// +required
 	Target TokenTarget `json:"target"`
 
+	// id defines the ID of the client token. Can only be specified by a root token. The ID provided may not contain a . character. Otherwise, the token ID is a randomly generated value.
+	// +kubebuilder:validation:Pattern=^[^.]*$
+	// +optional
+	ID string `json:"id,omitempty"`
+
 	// roleName defines the name of the token role.
 	// +optional
 	RoleName string `json:"roleName,omitempty"`
@@ -80,6 +85,11 @@ type TokenSpec struct {
 	// explicitMaxTTL if set, the token will have an explicit max TTL set upon it. This maximum token TTL cannot be changed later, and unlike with normal tokens, updates to the system/mount max TTL value will have no effect at renewal time.
 	// +optional
 	ExplicitMaxTTL string `json:"explicitMaxTTL,omitempty"`
+
+	// displayName defines the display name of the token.
+	// +kubebuilder:default="token"
+	// +optional
+	DisplayName string `json:"displayName,omitempty"`
 
 	// numUses defines the maximum uses for the given token. This can be used to create a one-time-token or limited use token. The value of 0 has no limit to the number of uses.
 	// +kubebuilder:validation:Minimum=0
