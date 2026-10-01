@@ -1,0 +1,7 @@
+---
+repos:
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.21.0
+    hooks:
+      - id: yamlfmt
+        pass_filenames: false

@@ -1,0 +1,13 @@
+---
+
+when:
+  - event:
+      - manual
+  - event:
+      - push
+
+steps:
+  - name: yaml:fmt
+    image: ghcr.io/google/yamlfmt:0.21.0
+    commands:
+      - yamlfmt -lint -verbose
