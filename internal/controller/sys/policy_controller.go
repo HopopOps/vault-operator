@@ -28,8 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	vaultapi "github.com/hashicorp/vault/api"
-
 	sysv1beta1 "hopopops/vault-operator/api/sys/v1beta1"
 	"hopopops/vault-operator/internal/connector/vault"
 )
@@ -47,7 +45,7 @@ const (
 type PolicyReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Vault  *vaultapi.Client
+	Vault  *vault.Vault
 }
 
 // +kubebuilder:rbac:groups=sys.toolkit.vault.hopopops.com,resources=policies,verbs=get;list;watch;create;update;patch;delete
@@ -153,11 +151,21 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 }
 
 func (r *PolicyReconciler) deleteVaultPolicy(ctx context.Context, policy *sysv1beta1.Policy) error {
-	return r.Vault.Sys().DeletePolicyWithContext(ctx, policy.Name)
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.Sys().DeletePolicyWithContext(ctx, policy.Name)
 }
 
 func (r *PolicyReconciler) fetchVaultPolicy(ctx context.Context, policy *sysv1beta1.Policy) (*vault.Policy, error) {
-	content, err := r.Vault.Sys().GetPolicyWithContext(ctx, policy.Name)
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := c.Sys().GetPolicyWithContext(ctx, policy.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +179,12 @@ func (r *PolicyReconciler) fetchVaultPolicy(ctx context.Context, policy *sysv1be
 }
 
 func (r *PolicyReconciler) updateVaultPolicy(ctx context.Context, policy *sysv1beta1.Policy) error {
-	return r.Vault.Sys().PutPolicyWithContext(ctx, policy.Name, *policy.Spec.Policy)
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.Sys().PutPolicyWithContext(ctx, policy.Name, *policy.Spec.Policy)
 }
 
 // SetupWithManager sets up the controller with the Manager.

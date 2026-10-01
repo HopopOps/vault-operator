@@ -30,8 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	vaultapi "github.com/hashicorp/vault/api"
-
 	authv1beta1 "hopopops/vault-operator/api/auth/v1beta1"
 	"hopopops/vault-operator/internal/connector/vault"
 )
@@ -49,7 +47,7 @@ const (
 type KubernetesRoleReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Vault  *vaultapi.Client
+	Vault  *vault.Vault
 }
 
 // +kubebuilder:rbac:groups=auth.toolkit.vault.hopopops.com,resources=kubernetesroles,verbs=get;list;watch;create;update;patch;delete
@@ -155,12 +153,22 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 }
 
 func (r *KubernetesRoleReconciler) deleteVaultKubernetesRole(ctx context.Context, role *authv1beta1.KubernetesRole) error {
-	_, err := r.Vault.Logical().DeleteWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name))
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Logical().DeleteWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name))
 	return err
 }
 
 func (r *KubernetesRoleReconciler) fetchVaultKubernetesRole(ctx context.Context, role *authv1beta1.KubernetesRole) (*vault.KubernetesRole, error) {
-	s, err := r.Vault.Logical().ReadWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name))
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := c.Logical().ReadWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name))
 	if err != nil {
 		// TODO: "not found" should not be an error
 		return nil, err
@@ -208,7 +216,12 @@ func (r *KubernetesRoleReconciler) updateVaultKubernetesRole(ctx context.Context
 		return err
 	}
 
-	_, err = r.Vault.Logical().WriteWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name), m)
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Logical().WriteWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name), m)
 	return err
 }
 

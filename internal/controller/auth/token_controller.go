@@ -33,6 +33,8 @@ import (
 
 	vaultapi "github.com/hashicorp/vault/api"
 
+	"hopopops/vault-operator/internal/connector/vault"
+
 	authv1beta1 "hopopops/vault-operator/api/auth/v1beta1"
 )
 
@@ -49,7 +51,7 @@ const (
 type TokenReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Vault  *vaultapi.Client
+	Vault  *vault.Vault
 }
 
 // +kubebuilder:rbac:groups=auth.toolkit.vault.hopopops.com,resources=tokens,verbs=get;list;watch;create;update;patch;delete
@@ -90,7 +92,13 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 					return ctrl.Result{}, err
 				}
 
-				if err := r.Vault.Auth().Token().RevokeAccessorWithContext(ctx, token.Status.Accessor); err != nil {
+				c, err := r.Vault.Client(ctx)
+				if err != nil {
+					log.Error(err, "Failed to get a Vault client")
+					return ctrl.Result{}, err
+				}
+
+				if err := c.Auth().Token().RevokeAccessorWithContext(ctx, token.Status.Accessor); err != nil {
 					log.Error(err, "Failed to delete accessor")
 					return ctrl.Result{}, err
 				}
@@ -132,7 +140,13 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			EntityAlias:     token.Spec.EntityAlias,
 		}
 
-		if t, err := r.Vault.Auth().Token().CreateWithContext(ctx, tcr); err != nil {
+		c, err := r.Vault.Client(ctx)
+		if err != nil {
+			log.Error(err, "Failed to get a Vault client")
+			return ctrl.Result{}, err
+		}
+
+		if t, err := c.Auth().Token().CreateWithContext(ctx, tcr); err != nil {
 			log.Error(err, "Failed to create Token")
 			meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create token engine in Vault"})
 			if err := r.Status().Update(ctx, token); err != nil {

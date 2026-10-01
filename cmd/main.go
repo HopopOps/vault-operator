@@ -214,7 +214,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	v, _, err := vault.NewVaultKubernetesClient(context.Background(), &vault.Parameters{
+	v, err := vault.NewVaultKubernetesClient(context.Background(), &vault.Parameters{
 		Address:   vaultAddr,
 		AuthPath:  vaultAuthPath,
 		Role:      vaultRole,
@@ -227,7 +227,7 @@ func main() {
 	if err := (&syscontroller.PolicyReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Vault:  v.Client,
+		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Policy")
 		os.Exit(1)
@@ -235,7 +235,7 @@ func main() {
 	if err := (&authcontroller.KubernetesRoleReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Vault:  v.Client,
+		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "KubernetesRole")
 		os.Exit(1)
@@ -243,7 +243,7 @@ func main() {
 	if err := (&syscontroller.AuthReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Vault:  v.Client,
+		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Auth")
 		os.Exit(1)
@@ -251,7 +251,7 @@ func main() {
 	if err := (&authcontroller.TokenReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Vault:  v.Client,
+		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Token")
 		os.Exit(1)

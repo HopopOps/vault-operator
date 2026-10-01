@@ -32,6 +32,7 @@ import (
 	vaultapi "github.com/hashicorp/vault/api"
 
 	sysv1beta1 "hopopops/vault-operator/api/sys/v1beta1"
+	"hopopops/vault-operator/internal/connector/vault"
 )
 
 const (
@@ -47,7 +48,7 @@ const (
 type AuthReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Vault  *vaultapi.Client
+	Vault  *vault.Vault
 }
 
 // +kubebuilder:rbac:groups=sys.toolkit.vault.hopopops.com,resources=auths,verbs=get;list;watch;create;update;patch;delete
@@ -118,7 +119,13 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 
-		ae, err := r.Vault.Sys().GetAuthWithContext(ctx, auth.Name)
+		c, err := r.Vault.Client(ctx)
+		if err != nil {
+			log.Error(err, "Failed to get a Vault client")
+			return ctrl.Result{}, err
+		}
+
+		ae, err := c.Sys().GetAuthWithContext(ctx, auth.Name)
 		if err != nil {
 			log.Error(err, "Failed to get auth engine from Vault")
 			return ctrl.Result{}, err
@@ -137,11 +144,21 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 }
 
 func (r *AuthReconciler) deleteVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
-	return r.Vault.Sys().DisableAuthWithContext(ctx, fmt.Sprintf("%s/", auth.Name))
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.Sys().DisableAuthWithContext(ctx, fmt.Sprintf("%s/", auth.Name))
 }
 
 func (r *AuthReconciler) createVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
-	return r.Vault.Sys().EnableAuthWithOptionsWithContext(ctx, fmt.Sprintf("%s/", auth.Name), &vaultapi.EnableAuthOptions{
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.Sys().EnableAuthWithOptionsWithContext(ctx, fmt.Sprintf("%s/", auth.Name), &vaultapi.EnableAuthOptions{
 		Type:        *auth.Spec.Type,
 		Description: *auth.Spec.Description,
 	})

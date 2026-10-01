@@ -4,14 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
+	"time"
 
 	vaultapi "github.com/hashicorp/vault/api"
 	vaultauth "github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
+// expiryMargin is how long before the actual expiration a token is considered
+// expired, so a request is never issued with a token about to die.
+const expiryMargin = 30 * time.Second
+
 type Vault struct {
-	Client     *vaultapi.Client
+	client     *vaultapi.Client
 	parameters Parameters
+
+	mu     sync.Mutex
+	expiry time.Time // zero value means the token never expires
 }
 
 type Parameters struct {
@@ -24,7 +33,7 @@ type Parameters struct {
 	TokenPath string
 }
 
-func NewVaultKubernetesClient(ctx context.Context, parameters *Parameters) (*Vault, *vaultapi.Secret, error) {
+func NewVaultKubernetesClient(ctx context.Context, parameters *Parameters) (*Vault, error) {
 	log.Printf("connecting to vault @ %s", parameters.Address)
 
 	config := vaultapi.DefaultConfig() // modify for more granular configuration
@@ -32,108 +41,43 @@ func NewVaultKubernetesClient(ctx context.Context, parameters *Parameters) (*Vau
 
 	client, err := vaultapi.NewClient(config)
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to initialize vault client: %w", err)
+		return nil, fmt.Errorf("unable to initialize vault client: %w", err)
 	}
 
 	vault := &Vault{
-		Client:     client,
+		client:     client,
 		parameters: *parameters,
 	}
 
-	token, err := vault.login(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("vault login error: %w", err)
+	if err := vault.login(ctx); err != nil {
+		return nil, fmt.Errorf("vault login error: %w", err)
 	}
 
 	log.Println("connecting to vault: success!")
 
-	return vault, token, nil
+	return vault, nil
 }
 
-func (v *Vault) PeriodicallyRenewLeases(
-	ctx context.Context,
-	authToken *vaultapi.Secret,
-) {
-	/* */ log.Println("renew / recreate secrets loop: begin")
-	defer log.Println("renew / recreate secrets loop: end")
+// Client returns a vault client holding a valid token, logging in again when
+// the current token is expired or about to expire.
+func (v *Vault) Client(ctx context.Context) (*vaultapi.Client, error) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 
-	currentAuthToken := authToken
+	if !v.expiry.IsZero() && time.Now().Add(expiryMargin).After(v.expiry) {
+		log.Println("vault token expired, logging in again")
 
-	for {
-		renewed, err := v.renewLeases(ctx, currentAuthToken)
-		if err != nil {
-			log.Fatalf("renew error: %v", err) // simplified error handling
-		}
-
-		if renewed&exitRequested != 0 {
-			return
-		}
-
-		if renewed&expiringAuthToken != 0 {
-			log.Printf("auth token: can no longer be renewed; will log in again")
-
-			authToken, err := v.login(ctx)
-			if err != nil {
-				log.Fatalf("login authentication error: %v", err) // simplified error handling
-			}
-
-			currentAuthToken = authToken
+		if err := v.login(ctx); err != nil {
+			return nil, fmt.Errorf("vault login error: %w", err)
 		}
 	}
+
+	return v.client, nil
 }
 
-// renewResult is a bitmask which could contain one or more of the values below
-type renewResult uint8
-
-const (
-	renewError renewResult = 1 << iota
-	exitRequested
-	expiringAuthToken // will be revoked soon
-)
-
-// renewLeases is a blocking helper function that uses LifetimeWatcher
-// instances to periodically renew the given secrets when they are close to
-// their 'token_ttl' expiration times until one of the secrets is close to its
-// 'token_max_ttl' lease expiration time.
-func (v *Vault) renewLeases(ctx context.Context, authToken *vaultapi.Secret) (renewResult, error) {
-	/* */ log.Println("renew cycle: begin")
-	defer log.Println("renew cycle: end")
-
-	// auth token
-	authTokenWatcher, err := v.Client.NewLifetimeWatcher(&vaultapi.LifetimeWatcherInput{
-		Secret: authToken,
-	})
-	if err != nil {
-		return renewError, fmt.Errorf("unable to initialize auth token lifetime watcher: %w", err)
-	}
-
-	go authTokenWatcher.Start()
-	defer authTokenWatcher.Stop()
-
-	// monitor events from both watchers
-	for {
-		select {
-		case <-ctx.Done():
-			return exitRequested, nil
-
-		// DoneCh will return if renewal fails, or if the remaining lease
-		// duration is under a built-in threshold and either renewing is not
-		// extending it or renewing is disabled.  In both cases, the caller
-		// should attempt a re-read of the secret. Clients should check the
-		// return value of the channel to see if renewal was successful.
-		case err := <-authTokenWatcher.DoneCh():
-			// Leases created by a token get revoked when the token is revoked.
-			return expiringAuthToken, err
-
-		// RenewCh is a channel that receives a message when a successful
-		// renewal takes place and includes metadata about the renewal.
-		case info := <-authTokenWatcher.RenewCh():
-			log.Printf("auth token: successfully renewed; remaining duration: %ds", info.Secret.Auth.LeaseDuration)
-		}
-	}
-}
-
-func (v *Vault) login(ctx context.Context) (*vaultapi.Secret, error) {
+// login authenticates against the kubernetes auth method and records when the
+// returned token expires. Callers must hold v.mu, except at construction time.
+func (v *Vault) login(ctx context.Context) error {
 	// The service-account token will be read from the path where the token's
 	// Kubernetes Secret is mounted. By default, Kubernetes will mount it to
 	// /var/run/secrets/kubernetes.io/serviceaccount/token, but an administrator
@@ -146,16 +90,21 @@ func (v *Vault) login(ctx context.Context) (*vaultapi.Secret, error) {
 		vaultauth.WithMountPath(v.parameters.AuthPath),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
+		return fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
 	}
 
-	authInfo, err := v.Client.Auth().Login(ctx, kubernetesAuth)
+	authInfo, err := v.client.Auth().Login(ctx, kubernetesAuth)
 	if err != nil {
-		return nil, fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
+		return fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
 	}
-	if authInfo == nil {
-		return nil, fmt.Errorf("no auth info was returned after login")
+	if authInfo == nil || authInfo.Auth == nil {
+		return fmt.Errorf("no auth info was returned after login")
 	}
 
-	return authInfo, nil
+	v.expiry = time.Time{}
+	if ttl := authInfo.Auth.LeaseDuration; ttl > 0 {
+		v.expiry = time.Now().Add(time.Duration(ttl) * time.Second)
+	}
+
+	return nil
 }
