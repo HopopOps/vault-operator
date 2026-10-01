@@ -71,30 +71,12 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	if len(policy.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-		if err := r.Status().Update(ctx, policy); err != nil {
-			log.Error(err, "Failed to update Policy status")
-			return ctrl.Result{}, err
-		}
-
-		if err := r.Get(ctx, req.NamespacedName, policy); err != nil {
-			log.Error(err, "Failed to re-fetch Policy")
-			return ctrl.Result{}, err
-		}
-	}
-
 	if policy.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(policy, policyFinalizer) {
 			// Initialize finalizer
 			controllerutil.AddFinalizer(policy, policyFinalizer)
 			if err := r.Update(ctx, policy); err != nil {
 				log.Error(err, "Failed to add finalizer to Policy")
-				return ctrl.Result{}, err
-			}
-
-			if err := r.Get(ctx, req.NamespacedName, policy); err != nil {
-				log.Error(err, "Failed to re-fetch Policy")
 				return ctrl.Result{}, err
 			}
 		}
@@ -117,37 +99,45 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Create or update
-	if p, err := r.fetchVaultPolicy(ctx, policy); err != nil {
+	p, err := r.fetchVaultPolicy(ctx, policy)
+	if err != nil {
 		log.Error(err, "Failed to fetch Policy")
-		meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionFalse, Reason: "FailedToFetch", Message: "Failed to fetch policy from Vault"})
-		if err := r.Status().Update(ctx, policy); err != nil {
-			log.Error(err, "Failed to update Policy status")
-			return ctrl.Result{}, err
-		}
-
+		_ = r.setCondition(ctx, policy, metav1.ConditionFalse, "FailedToFetch", "Failed to fetch policy from Vault")
 		return ctrl.Result{}, err
-	} else {
-		if p == nil || p.Name != policy.Name || p.Policy != *policy.Spec.Policy {
-			if err := r.updateVaultPolicy(ctx, policy); err != nil {
-				log.Error(err, "Failed to update Policy")
-				meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionFalse, Reason: "FailedToUpdate", Message: "Failed to push policy to Vault"})
-				if err := r.Status().Update(ctx, policy); err != nil {
-					log.Error(err, "Failed to update Policy status")
-					return ctrl.Result{}, err
-				}
+	}
 
-				return ctrl.Result{}, err
-			}
-
-			meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{Type: typeConfiguredPolicy, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully pushed policy to Vault"})
-			if err := r.Status().Update(ctx, policy); err != nil {
-				log.Error(err, "Failed to update Policy status")
-				return ctrl.Result{}, err
-			}
+	if p == nil || p.Name != policy.Name || p.Policy != *policy.Spec.Policy {
+		if err := r.updateVaultPolicy(ctx, policy); err != nil {
+			log.Error(err, "Failed to update Policy")
+			_ = r.setCondition(ctx, policy, metav1.ConditionFalse, "FailedToUpdate", "Failed to push policy to Vault")
+			return ctrl.Result{}, err
 		}
 	}
 
-	return ctrl.Result{}, nil
+	// Always record the outcome, the policy may already have been in sync.
+	return ctrl.Result{}, r.setCondition(ctx, policy, metav1.ConditionTrue, "Configured", "Successfully pushed policy to Vault")
+}
+
+// setCondition records the reconciliation outcome for the current generation.
+// Errors are logged and returned, never masking the error that led here.
+func (r *PolicyReconciler) setCondition(ctx context.Context, policy *sysv1beta1.Policy, status metav1.ConditionStatus, reason, message string) error {
+	log := logf.FromContext(ctx)
+
+	policy.Status.ObservedGeneration = policy.Generation
+	meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{
+		Type:               typeConfiguredPolicy,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: policy.Generation,
+	})
+
+	if err := r.Status().Update(ctx, policy); err != nil {
+		log.Error(err, "Failed to update Policy status")
+		return err
+	}
+
+	return nil
 }
 
 func (r *PolicyReconciler) deleteVaultPolicy(ctx context.Context, policy *sysv1beta1.Policy) error {

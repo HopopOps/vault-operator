@@ -192,6 +192,11 @@ spec:
                   - type
                   type: object
                 type: array
+              observedGeneration:
+                description: observedGeneration is the .metadata.generation the status
+                  was last reconciled against.
+                format: int64
+                type: integer
             type: object
         required:
         - spec

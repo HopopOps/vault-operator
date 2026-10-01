@@ -99,9 +99,8 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// Auth Initialization
 	if !controllerutil.ContainsFinalizer(auth, authFinalizer) {
 		controllerutil.AddFinalizer(auth, authFinalizer)
-		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Update(ctx, auth); err != nil {
-			log.Error(err, "Failed to initialize Auth status")
+			log.Error(err, "Failed to add finalizer to Auth")
 			return ctrl.Result{}, err
 		}
 	}
@@ -110,37 +109,52 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	if auth.Status.Accessor == "" {
 		if err := r.createVaultAuth(ctx, auth); err != nil {
 			log.Error(err, "Failed to create Auth")
-			meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create auth engine in Vault"})
-			if err := r.Status().Update(ctx, auth); err != nil {
-				log.Error(err, "Failed to update Auth status")
-				return ctrl.Result{}, err
-			}
-
+			_ = r.setCondition(ctx, auth, metav1.ConditionFalse, "FailedToCreate", "Failed to create auth engine in Vault")
 			return ctrl.Result{}, err
 		}
 
 		c, err := r.Vault.Client(ctx)
 		if err != nil {
 			log.Error(err, "Failed to get a Vault client")
+			_ = r.setCondition(ctx, auth, metav1.ConditionFalse, "FailedToFetch", "Failed to fetch auth engine from Vault")
 			return ctrl.Result{}, err
 		}
 
 		ae, err := c.Sys().GetAuthWithContext(ctx, auth.Name)
 		if err != nil {
 			log.Error(err, "Failed to get auth engine from Vault")
+			_ = r.setCondition(ctx, auth, metav1.ConditionFalse, "FailedToFetch", "Failed to fetch auth engine from Vault")
 			return ctrl.Result{}, err
 		}
 
 		// Set accessor for reference
 		auth.Status.Accessor = ae.Accessor
-		meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{Type: typeConfiguredAuth, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully created auth engine in Vault"})
-		if err := r.Status().Update(ctx, auth); err != nil {
-			log.Error(err, "Failed to update Auth status")
-			return ctrl.Result{}, err
-		}
 	}
 
-	return ctrl.Result{}, nil
+	// Always record the outcome, the auth engine may already have been created.
+	return ctrl.Result{}, r.setCondition(ctx, auth, metav1.ConditionTrue, "Configured", "Successfully created auth engine in Vault")
+}
+
+// setCondition records the reconciliation outcome for the current generation.
+// Errors are logged and returned, never masking the error that led here.
+func (r *AuthReconciler) setCondition(ctx context.Context, auth *sysv1beta1.Auth, status metav1.ConditionStatus, reason, message string) error {
+	log := logf.FromContext(ctx)
+
+	auth.Status.ObservedGeneration = auth.Generation
+	meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{
+		Type:               typeConfiguredAuth,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: auth.Generation,
+	})
+
+	if err := r.Status().Update(ctx, auth); err != nil {
+		log.Error(err, "Failed to update Auth status")
+		return err
+	}
+
+	return nil
 }
 
 func (r *AuthReconciler) deleteVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {

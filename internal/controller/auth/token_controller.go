@@ -92,15 +92,17 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 					return ctrl.Result{}, err
 				}
 
-				c, err := r.Vault.Client(ctx)
-				if err != nil {
-					log.Error(err, "Failed to get a Vault client")
-					return ctrl.Result{}, err
-				}
+				if token.Status.Accessor != "" {
+					c, err := r.Vault.Client(ctx)
+					if err != nil {
+						log.Error(err, "Failed to get a Vault client")
+						return ctrl.Result{}, err
+					}
 
-				if err := c.Auth().Token().RevokeAccessorWithContext(ctx, token.Status.Accessor); err != nil {
-					log.Error(err, "Failed to delete accessor")
-					return ctrl.Result{}, err
+					if err := c.Auth().Token().RevokeAccessorWithContext(ctx, token.Status.Accessor); err != nil {
+						log.Error(err, "Failed to delete accessor")
+						return ctrl.Result{}, err
+					}
 				}
 			}
 
@@ -116,9 +118,8 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	// Token Initialization
 	if !controllerutil.ContainsFinalizer(token, tokenFinalizer) {
 		controllerutil.AddFinalizer(token, tokenFinalizer)
-		meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Update(ctx, token); err != nil {
-			log.Error(err, "Failed to initialize Token status")
+			log.Error(err, "Failed to add finalizer to Token")
 			return ctrl.Result{}, err
 		}
 	}
@@ -143,39 +144,57 @@ func (r *TokenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		c, err := r.Vault.Client(ctx)
 		if err != nil {
 			log.Error(err, "Failed to get a Vault client")
+			_ = r.setCondition(ctx, token, metav1.ConditionFalse, "FailedToCreate", "Failed to reach Vault")
 			return ctrl.Result{}, err
 		}
 
-		if t, err := c.Auth().Token().CreateWithContext(ctx, tcr); err != nil {
+		t, err := c.Auth().Token().CreateWithContext(ctx, tcr)
+		if err != nil {
 			log.Error(err, "Failed to create Token")
-			meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: "Failed to create token engine in Vault"})
-			if err := r.Status().Update(ctx, token); err != nil {
-				log.Error(err, "Failed to update Token status")
-				return ctrl.Result{}, err
-			}
-
+			_ = r.setCondition(ctx, token, metav1.ConditionFalse, "FailedToCreate", "Failed to create token engine in Vault")
 			return ctrl.Result{}, err
-		} else {
-			if err := r.createK8sSecret(ctx, token, t.Auth.ClientToken); err != nil {
-				log.Error(err, "Failed to create k8s secret")
-				meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionFalse, Reason: "FailedToCreate", Message: fmt.Sprintf("Failed to create k8s secret %s", token.Spec.Target.Name)})
-				if err := r.Status().Update(ctx, token); err != nil {
-					log.Error(err, "Failed to update Token status")
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{}, err
+		}
+
+		if err := r.createK8sSecret(ctx, token, t.Auth.ClientToken); err != nil {
+			log.Error(err, "Failed to create k8s secret")
+
+			// The token exists in Vault but its accessor is about to be lost,
+			// revoke it so the next reconciliation starts from a clean slate.
+			if rerr := c.Auth().Token().RevokeAccessorWithContext(ctx, t.Auth.Accessor); rerr != nil {
+				log.Error(rerr, "Failed to revoke the orphaned token", "accessor", t.Auth.Accessor)
 			}
 
-			token.Status.Accessor = t.Auth.Accessor
-			meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{Type: typeConfiguredToken, Status: metav1.ConditionTrue, Reason: "Configured", Message: "Successfully created token engine in Vault"})
-			if err := r.Status().Update(ctx, token); err != nil {
-				log.Error(err, "Failed to update Token status")
-				return ctrl.Result{}, err
-			}
+			_ = r.setCondition(ctx, token, metav1.ConditionFalse, "FailedToCreate", fmt.Sprintf("Failed to create k8s secret %s", token.Spec.Target.Name))
+			return ctrl.Result{}, err
 		}
+
+		token.Status.Accessor = t.Auth.Accessor
 	}
 
-	return ctrl.Result{}, nil
+	// Always record the outcome, the token may already have been created.
+	return ctrl.Result{}, r.setCondition(ctx, token, metav1.ConditionTrue, "Configured", "Successfully created token engine in Vault")
+}
+
+// setCondition records the reconciliation outcome for the current generation.
+// Errors are logged and returned, never masking the error that led here.
+func (r *TokenReconciler) setCondition(ctx context.Context, token *authv1beta1.Token, status metav1.ConditionStatus, reason, message string) error {
+	log := logf.FromContext(ctx)
+
+	token.Status.ObservedGeneration = token.Generation
+	meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{
+		Type:               typeConfiguredToken,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: token.Generation,
+	})
+
+	if err := r.Status().Update(ctx, token); err != nil {
+		log.Error(err, "Failed to update Token status")
+		return err
+	}
+
+	return nil
 }
 
 func (r *TokenReconciler) deleteK8sSecret(ctx context.Context, token *authv1beta1.Token) error {
@@ -241,7 +260,17 @@ func (r *TokenReconciler) createK8sSecret(ctx context.Context, token *authv1beta
 		return err
 	}
 
-	return apierrors.NewAlreadyExists(corev1.Resource("secrets"), secret.Name)
+	if !metav1.IsControlledBy(existingSecret, token) {
+		return apierrors.NewAlreadyExists(corev1.Resource("secrets"), secret.Name)
+	}
+
+	existingSecret.Data = secret.Data
+	if err := r.Update(ctx, existingSecret); err != nil {
+		return err
+	}
+	log.Info("Updated secret", "secret", secret.Name)
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
