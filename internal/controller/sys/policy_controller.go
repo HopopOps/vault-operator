@@ -56,7 +56,7 @@ type PolicyReconciler struct {
 // move the current state of the cluster closer to the desired state.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.25.0/pkg/reconcile
 func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -71,7 +71,7 @@ func (r *PolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return ctrl.Result{}, err
 	}
 
-	if policy.ObjectMeta.DeletionTimestamp.IsZero() {
+	if policy.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(policy, policyFinalizer) {
 			// Initialize finalizer
 			controllerutil.AddFinalizer(policy, policyFinalizer)

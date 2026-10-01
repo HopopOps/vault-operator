@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -108,7 +109,22 @@ type TokenStatus struct {
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// For Kubernetes API conventions, see:
+	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
+
+	// conditions represent the current state of the Token resource.
+	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
+	//
+	// Standard condition types include:
+	// - "Available": the resource is fully functional
+	// - "Progressing": the resource is being created or updated
+	// - "Degraded": the resource failed to reach or maintain its desired state
+	//
+	// The status of each condition is one of True, False, or Unknown.
+	// +listType=map
+	// +listMapKey=type
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 	Accessor   string             `json:"accessor,omitempty"`
 }
 
@@ -121,7 +137,7 @@ type Token struct {
 
 	// metadata is a standard object metadata
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty,omitzero"`
+	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	// spec defines the desired state of Token
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="TokenSpec is immutable"
@@ -130,7 +146,7 @@ type Token struct {
 
 	// status defines the observed state of Token
 	// +optional
-	Status TokenStatus `json:"status,omitempty,omitzero"`
+	Status TokenStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true
@@ -138,10 +154,13 @@ type Token struct {
 // TokenList contains a list of Token
 type TokenList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata,omitzero"`
 	Items           []Token `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Token{}, &TokenList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(SchemeGroupVersion, &Token{}, &TokenList{})
+		return nil
+	})
 }
