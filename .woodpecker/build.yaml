@@ -75,10 +75,10 @@ steps:
               An operator to support configuring ACL and KSA bindings to Vault policies and Vault authentication engine roles from within Kubernetes
           - name: org.opencontainers.image.documentation
             value: https://code.hopopops.com/kubernetes/vault-operator/
-        extraOptions:
-          # multiarch build
-          - name: platform
-            value: linux/amd64,linux/arm64
+        # extraOptions:
+        #   # multiarch build
+        #   - name: platform
+        #     value: linux/amd64,linux/arm64
         destinations:
           - code.hopopops.com/kubernetes/vault-operator:${CI_COMMIT_TAG}
           - code.hopopops.com/kubernetes/vault-operator:latest
