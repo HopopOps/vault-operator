@@ -1325,7 +1325,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: quay.io/hopopops/vault-operator:0.3.1
+        image: quay.io/hopopops/vault-operator:0.3.2
         livenessProbe:
           httpGet:
             path: /healthz
