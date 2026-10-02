@@ -41,7 +41,7 @@ const (
 
 // Definitions to manage status conditions
 const (
-	typeConfiguredAuth = "Configured"
+	typeReadyAuth = "Ready"
 )
 
 // AuthReconciler reconciles a Auth object
@@ -142,7 +142,7 @@ func (r *AuthReconciler) setCondition(ctx context.Context, auth *sysv1beta1.Auth
 
 	auth.Status.ObservedGeneration = auth.Generation
 	meta.SetStatusCondition(&auth.Status.Conditions, metav1.Condition{
-		Type:               typeConfiguredAuth,
+		Type:               typeReadyAuth,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,

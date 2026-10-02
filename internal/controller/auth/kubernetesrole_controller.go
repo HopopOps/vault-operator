@@ -40,7 +40,7 @@ const (
 
 // Definitions to manage status conditions
 const (
-	typeConfiguredRole = "Configured"
+	typeReadyRole = "Ready"
 )
 
 // KubernetesRoleReconciler reconciles a KubernetesRole object
@@ -127,7 +127,7 @@ func (r *KubernetesRoleReconciler) setCondition(ctx context.Context, role *authv
 
 	role.Status.ObservedGeneration = role.Generation
 	meta.SetStatusCondition(&role.Status.Conditions, metav1.Condition{
-		Type:               typeConfiguredRole,
+		Type:               typeReadyRole,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,

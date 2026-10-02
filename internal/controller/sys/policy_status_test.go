@@ -23,7 +23,7 @@ const policyName = "test"
 
 // TestPolicyStatusWhenAlreadyInSync is the regression check for a policy whose
 // content already matches in Vault: nothing is written to Vault, yet the
-// resource must still report Configured for the current generation.
+// resource must still report Ready for the current generation.
 func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 	const document = "path \"secret/*\" { capabilities = [\"read\"] }"
 
@@ -92,9 +92,9 @@ func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cond := meta.FindStatusCondition(got.Status.Conditions, typeConfiguredPolicy)
+	cond := meta.FindStatusCondition(got.Status.Conditions, typeReadyPolicy)
 	if cond == nil {
-		t.Fatalf("no %q condition, status is %+v", typeConfiguredPolicy, got.Status)
+		t.Fatalf("no %q condition, status is %+v", typeReadyPolicy, got.Status)
 	}
 	if cond.Status != metav1.ConditionTrue {
 		t.Errorf("condition is %s/%s, want True", cond.Status, cond.Reason)

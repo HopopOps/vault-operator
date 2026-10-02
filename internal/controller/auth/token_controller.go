@@ -44,7 +44,7 @@ const (
 
 // Definitions to manage status conditions
 const (
-	typeConfiguredToken = "Configured"
+	typeReadyToken = "Ready"
 )
 
 // TokenReconciler reconciles a Token object
@@ -182,7 +182,7 @@ func (r *TokenReconciler) setCondition(ctx context.Context, token *authv1beta1.T
 
 	token.Status.ObservedGeneration = token.Generation
 	meta.SetStatusCondition(&token.Status.Conditions, metav1.Condition{
-		Type:               typeConfiguredToken,
+		Type:               typeReadyToken,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,

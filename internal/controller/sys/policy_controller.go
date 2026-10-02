@@ -38,7 +38,7 @@ const (
 
 // Definitions to manage status conditions
 const (
-	typeConfiguredPolicy = "Configured"
+	typeReadyPolicy = "Ready"
 )
 
 // PolicyReconciler reconciles a Policy object
@@ -125,7 +125,7 @@ func (r *PolicyReconciler) setCondition(ctx context.Context, policy *sysv1beta1.
 
 	policy.Status.ObservedGeneration = policy.Generation
 	meta.SetStatusCondition(&policy.Status.Conditions, metav1.Condition{
-		Type:               typeConfiguredPolicy,
+		Type:               typeReadyPolicy,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
