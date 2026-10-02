@@ -25,7 +25,7 @@ func TestClientRelogin(t *testing.T) {
 			logins := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				logins++
-				fmt.Fprintf(w, `{"auth":{"client_token":"token-%d","lease_duration":%d}}`, logins, tc.ttl)
+				_, _ = fmt.Fprintf(w, `{"auth":{"client_token":"token-%d","lease_duration":%d}}`, logins, tc.ttl)
 			}))
 			defer server.Close()
 

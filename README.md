@@ -1,102 +1,53 @@
 # vault-operator
-A basic vault operator enabling the user to create custom vault resources such as policies and roles for kubernetes 
-authentication engine.
 
-## Description
-This is a basic Hashicorp Vault operator enabling the user to create custom vault resources such as policies and roles 
-for kubernetes authentication engine. It was written in order to be a part of GitOps pipelines making use of tools 
-like `external-secrets-operator` where one as to write and maintain a lot of vault policies and auth engine role. 
-Being able to store those parts of a configuration next to an app bundle using them is a nice QoL improvement.
+A small Kubernetes operator managing HashiCorp Vault policies, kubernetes auth roles, auth
+method mounts and tokens from CRDs, so that Vault configuration can live next to the app bundle
+that uses it in a GitOps pipeline.
 
- This project is an exercise to demonstrate how simple it can be to augment kubernetes API thanks to the operator 
- pattern. The creator needed a simpler alternative to 
- [redhat-cop/vault-config-operator](https://github.com/redhat-cop/vault-config-operator), a project about 
- configuring vault from CRD. `vault-config-operator` already implement a large portion of Hashicorp Vault's API, 
- looks well maintained and will most likely fit your needs.
+If you need broad coverage of the Vault API, use
+[redhat-cop/vault-config-operator](https://github.com/redhat-cop/vault-config-operator) instead.
+This one deliberately implements four resources.
 
-## Getting Started
+## Resources
 
-### Prerequisites
-- go version v1.24.0+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+All resources are namespaced. The Vault object name is derived from the CR.
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+| Kind | Group | Manages |
+| --- | --- | --- |
+| `Policy` | `sys.toolkit.vault.hopopops.com/v1beta1` | ACL policy (`spec.policy`, HCL) |
+| `Auth` | `sys.toolkit.vault.hopopops.com/v1beta1` | auth method mount (`spec.type`, `spec.description`, tuning) |
+| `KubernetesRole` | `auth.toolkit.vault.hopopops.com/v1beta1` | kubernetes auth role (`spec.boundServiceAccount*`, `spec.tokenPolicies`, …) |
+| `Token` | `auth.toolkit.vault.hopopops.com/v1beta1` | a Vault token, written to the Secret named by `spec.target.name` under key `token` |
+
+`Token` renews its lease and rewrites the Secret; `spec.target.deletionPolicy` (`Retain`,
+default, or `Delete`) decides what happens to the Secret when the CR goes away.
+
+Examples live in `config/samples/`.
+
+## Configuration
+
+The manager authenticates to Vault with the kubernetes auth method, using its own service
+account token. Flags:
+
+| Flag | Default |
+| --- | --- |
+| `--vault-addr` | `http://vault.vault-system:8200` |
+| `--vault-auth-endpoint` | `kubernetes` |
+| `--vault-role` | `vault-operator` |
+| `--vault-token-path` | `/var/run/secrets/kubernetes.io/serviceaccount/token` |
+
+Standard controller-runtime flags (`--metrics-bind-address`, `--leader-elect`, …) are also
+available; see `--help`.
+
+## Deploy
 
 ```sh
 make docker-build docker-push IMG=quay.io/hopopops/vault-operator:tag
-```
-
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
-
-**Install the CRDs into the cluster:**
-
-```sh
 make install
-```
-
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
-
-```sh
 make deploy IMG=quay.io/hopopops/vault-operator:tag
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
-
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
-
-```sh
-kubectl apply -k config/samples/
-```
-
->**NOTE**: Ensure that the samples has default values to test it out.
-
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
-```
-
-**Delete the APIs(CRDs) from the cluster:**
-
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=quay.io/hopopops/vault-operator:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-User can create a Kustomization to edit the parameters then just run 'kubectl apply -k <PATH to KUSTOMIZATION 
-DIRECTORY>' to install the project, i.e.:
+Or consume the generated bundle (`make build-installer` regenerates `dist/install.yaml`):
 
 ```yaml
 ---
@@ -115,30 +66,11 @@ patches:
       name: vault-operator-controller-manager
 ```
 
-### By providing a Helm Chart
+Removal: `make undeploy` then `make uninstall`.
 
-1. Build the chart using the optional helm plugin
+## Development
 
-```sh
-kubebuilder edit --plugins=helm/v1-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+Go 1.26+, `make help` lists the targets.
 
 ## License
 
@@ -155,4 +87,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-

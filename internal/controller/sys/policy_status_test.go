@@ -19,6 +19,8 @@ import (
 	"hopopops/vault-operator/internal/connector/vault"
 )
 
+const policyName = "test"
+
 // TestPolicyStatusWhenAlreadyInSync is the regression check for a policy whose
 // content already matches in Vault: nothing is written to Vault, yet the
 // resource must still report Configured for the current generation.
@@ -56,11 +58,11 @@ func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 
 	policy := &sysv1beta1.Policy{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test",
+			Name:       policyName,
 			Generation: 4,
 			Finalizers: []string{policyFinalizer},
 		},
-		Spec: sysv1beta1.PolicySpec{Policy: ptr(document)},
+		Spec: sysv1beta1.PolicySpec{Policy: new(document)},
 	}
 
 	sch := runtime.NewScheme()
@@ -76,7 +78,7 @@ func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 
 	r := &PolicyReconciler{Client: c, Scheme: c.Scheme(), Vault: v}
 	if _, err := r.Reconcile(context.Background(), ctrl.Request{
-		NamespacedName: types.NamespacedName{Name: "test"},
+		NamespacedName: types.NamespacedName{Name: policyName},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +88,7 @@ func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 	}
 
 	got := &sysv1beta1.Policy{}
-	if err := c.Get(context.Background(), types.NamespacedName{Name: "test"}, got); err != nil {
+	if err := c.Get(context.Background(), types.NamespacedName{Name: policyName}, got); err != nil {
 		t.Fatal(err)
 	}
 
@@ -102,4 +104,4 @@ func TestPolicyStatusWhenAlreadyInSync(t *testing.T) {
 	}
 }
 
-func ptr(s string) *string { return &s }
+//go:fix inline

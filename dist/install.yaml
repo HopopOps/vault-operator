@@ -11,7 +11,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: auths.sys.toolkit.vault.hopopops.com
 spec:
   group: sys.toolkit.vault.hopopops.com
@@ -63,6 +63,16 @@ spec:
               accessor:
                 type: string
               conditions:
+                description: |-
+                  conditions represent the current state of the Auth resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -118,6 +128,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               observedGeneration:
                 description: observedGeneration is the .metadata.generation the status
                   was last reconciled against.
@@ -136,7 +149,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: kubernetesroles.auth.toolkit.vault.hopopops.com
 spec:
   group: auth.toolkit.vault.hopopops.com
@@ -270,6 +283,16 @@ spec:
             description: status defines the observed state of KubernetesRole
             properties:
               conditions:
+                description: |-
+                  conditions represent the current state of the KubernetesRole resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -325,6 +348,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               observedGeneration:
                 description: observedGeneration is the .metadata.generation the status
                   was last reconciled against.
@@ -343,7 +369,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: policies.sys.toolkit.vault.hopopops.com
 spec:
   group: sys.toolkit.vault.hopopops.com
@@ -389,6 +415,16 @@ spec:
             description: status defines the observed state of Policy
             properties:
               conditions:
+                description: |-
+                  conditions represent the current state of the Policy resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -444,6 +480,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               observedGeneration:
                 description: observedGeneration is the .metadata.generation the status
                   was last reconciled against.
@@ -462,7 +501,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.22.0
   name: tokens.auth.toolkit.vault.hopopops.com
 spec:
   group: auth.toolkit.vault.hopopops.com
@@ -597,6 +636,16 @@ spec:
               accessor:
                 type: string
               conditions:
+                description: |-
+                  conditions represent the current state of the Token resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -652,6 +701,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               observedGeneration:
                 description: observedGeneration is the .metadata.generation the status
                   was last reconciled against.
@@ -1207,7 +1259,10 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
-        ports: []
+        ports:
+        - containerPort: 8081
+          name: health
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz

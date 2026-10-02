@@ -58,7 +58,7 @@ type KubernetesRoleReconciler struct {
 // move the current state of the cluster closer to the desired state.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.21.0/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.25.0/pkg/reconcile
 func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
@@ -73,7 +73,7 @@ func (r *KubernetesRoleReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
-	if role.ObjectMeta.DeletionTimestamp.IsZero() {
+	if role.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(role, roleFinalizer) {
 			// Initialize finalizer
 			controllerutil.AddFinalizer(role, roleFinalizer)
@@ -201,7 +201,7 @@ func (r *KubernetesRoleReconciler) updateVaultKubernetesRole(ctx context.Context
 		return err
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	if err = json.Unmarshal(jsonBytes, &m); err != nil {
 		return err
 	}
