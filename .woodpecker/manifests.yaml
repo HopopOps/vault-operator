@@ -2,8 +2,8 @@
 when:
   - event:
       - manual
-  - event:
       - push
+    branch: main
   - event:
       - pull_request
 variables:
@@ -38,13 +38,6 @@ steps:
           }
         }
         EOF
-    when:
-      - event:
-          - manual
-          - push
-        branch: main
-      - event:
-          - pull_request
   - name: manifests:publish
     image: *oci-image
     environment:
