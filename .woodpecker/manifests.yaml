@@ -9,14 +9,9 @@ when:
 variables:
   - &oci-image code.hopopops.com/woodpecker-plugins/oci:1.0.0
   - &oci-url oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
-  - &not-main
+  - &on-pull-request
     - event:
         - pull_request
-    - event:
-        - manual
-        - push
-      branch:
-        exclude: main
 steps:
   - name: registry:login
     image: docker.io/library/busybox:latest
@@ -52,8 +47,8 @@ steps:
           - manual
           - push
         branch: main
-  # Pull the published manifests next to a freshly generated set so a branch shows what it
-  # would change once merged. Ignored on failure, the artifact does not exist on the first run.
+  # Pull the published manifests next to a freshly generated set so a pull request shows what
+  # it would change once merged. Ignored on failure, the artifact does not exist on the first run.
   - name: manifests:fetch
     image: *oci-image
     environment:
@@ -64,7 +59,7 @@ steps:
       url: *oci-url
       path: oci-dist
       clean: true
-    when: *not-main
+    when: *on-pull-request
   - name: manifests:diff
     image: docker.io/library/golang:1.27
     environment:
@@ -75,5 +70,5 @@ steps:
       # build-installer rewrites the kustomize image, keep the one the repository declares
       - IMG="$(awk '/newName:/{n=$2} /newTag:/{t=$2} END {print n":"t}' config/manager/kustomization.yaml)"
       - make build-installer IMG="$${IMG}"
-      - diff -u oci-dist/install.yaml dist/install.yaml || true
-    when: *not-main
+      - diff -u --color=always oci-dist/install.yaml dist/install.yaml || true
+    when: *on-pull-request
