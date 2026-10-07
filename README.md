@@ -6,7 +6,8 @@ app bundle that uses it in a GitOps pipeline.
 
 If you need broad coverage of the Vault API, use
 [redhat-cop/vault-config-operator](https://github.com/redhat-cop/vault-config-operator) instead.
-This one deliberately implements a handful of resources.
+This one deliberately implements a handful of resources only but I built it  to cover a few
+things/issues that I felt where lacking in `redhat-cop/vault-config-operator`. 
 
 ## Resources
 
@@ -48,21 +49,21 @@ available; see `--help`.
 ## Deploy
 
 ```sh
-make docker-build docker-push IMG=quay.io/hopopops/vault-operator:tag
+make docker-build docker-push IMG=quay.io/hopopops/vault-operator:x.y.z
 make install
-make deploy IMG=quay.io/hopopops/vault-operator:tag
+make deploy IMG=quay.io/hopopops/vault-operator:x.y.z
 ```
 
 Or consume the generated bundle (`make build-installer` regenerates `dist/install.yaml`; CI
-publishes it from `main` as the OCI artifact
-`oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest`):
+also publishes it from `main` and tags as the OCI artifact
+`oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest`, `oci://code.hopopops.com/kubernetes/vault-operator/manifests:x.y.z`):
 
 ```yaml
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://raw.githubusercontent.com/hopopops/vault-operator/main/dist/install.yaml
+  - https://code.hopopops.com/kubernetes/vault-operator/raw/tag/x.y.z/dist/install.yaml
 
 patches:
   - patch: |
