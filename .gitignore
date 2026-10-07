@@ -28,3 +28,6 @@ go.work
 
 # Kubeconfig might contain secrets
 *.kubeconfig
+
+# OCI artifact pulled back by CI to diff against
+/oci-dist/

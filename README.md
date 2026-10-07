@@ -53,7 +53,9 @@ make install
 make deploy IMG=quay.io/hopopops/vault-operator:tag
 ```
 
-Or consume the generated bundle (`make build-installer` regenerates `dist/install.yaml`):
+Or consume the generated bundle (`make build-installer` regenerates `dist/install.yaml`; CI
+publishes it from `main` as the OCI artifact
+`oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest`):
 
 ```yaml
 ---

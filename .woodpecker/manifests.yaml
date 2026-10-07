@@ -1,0 +1,79 @@
+---
+when:
+  - event:
+      - manual
+  - event:
+      - push
+  - event:
+      - pull_request
+variables:
+  - &oci-image code.hopopops.com/woodpecker-plugins/oci:1.0.0
+  - &oci-url oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
+  - &not-main
+    - event:
+        - pull_request
+    - event:
+        - manual
+        - push
+      branch:
+        exclude: main
+steps:
+  - name: registry:login
+    image: docker.io/library/busybox:latest
+    environment:
+      FORGE_USERNAME:
+        from_secret: forge-username
+      FORGE_PASSWORD:
+        from_secret: forge-password
+      DOCKER_CONFIG: ".docker"
+    commands:
+      - |
+        mkdir -p "$${DOCKER_CONFIG}"
+        cat <<EOF > "$${DOCKER_CONFIG}/config.json"
+        {
+          "auths": {
+            "code.hopopops.com": {
+              "auth": "$(echo -n "$${FORGE_USERNAME}:$${FORGE_PASSWORD}" | base64 -w 0)"
+            }
+          }
+        }
+        EOF
+  - name: manifests:publish
+    image: *oci-image
+    environment:
+      DOCKER_CONFIG: ".docker"
+    settings:
+      url: *oci-url
+      path: dist
+      reproducible: true
+      output: json
+    when:
+      - event:
+          - manual
+          - push
+        branch: main
+  # Pull the published manifests next to a freshly generated set so a branch shows what it
+  # would change once merged. Ignored on failure, the artifact does not exist on the first run.
+  - name: manifests:fetch
+    image: *oci-image
+    environment:
+      DOCKER_CONFIG: ".docker"
+    failure: ignore
+    settings:
+      action: pull
+      url: *oci-url
+      path: oci-dist
+      clean: true
+    when: *not-main
+  - name: manifests:diff
+    image: docker.io/library/golang:1.27
+    environment:
+      GOPROXY: https://go.pkgs.cache.valhall.lan,direct
+      GOPRIVATE: code.hopopops.com
+      GOFLAGS: -buildvcs=false
+    commands:
+      # build-installer rewrites the kustomize image, keep the one the repository declares
+      - IMG="$(awk '/newName:/{n=$2} /newTag:/{t=$2} END {print n":"t}' config/manager/kustomization.yaml)"
+      - make build-installer IMG="$${IMG}"
+      - diff -u oci-dist/install.yaml dist/install.yaml || true
+    when: *not-main
