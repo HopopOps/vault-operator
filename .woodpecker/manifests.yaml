@@ -9,6 +9,11 @@ when:
 variables:
   - &oci-image code.hopopops.com/woodpecker-plugins/oci:1.0.0
   - &oci-url oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
+  - &on-main
+    - event:
+        - manual
+        - push
+      branch: main
   - &on-pull-request
     - event:
         - pull_request
@@ -33,6 +38,13 @@ steps:
           }
         }
         EOF
+    when:
+      - event:
+          - manual
+          - push
+        branch: main
+      - event:
+          - pull_request
   - name: manifests:publish
     image: *oci-image
     environment:
@@ -42,11 +54,7 @@ steps:
       path: dist
       reproducible: true
       output: json
-    when:
-      - event:
-          - manual
-          - push
-        branch: main
+    when: *on-main
   # Pull the published manifests next to a freshly generated set so a pull request shows what
   # it would change once merged. Ignored on failure, the artifact does not exist on the first run.
   - name: manifests:fetch
