@@ -81,11 +81,8 @@ steps:
         #     value: linux/amd64,linux/arm64
         destinations:
           - code.hopopops.com/kubernetes/vault-operator:${CI_COMMIT_TAG}
-          - code.hopopops.com/kubernetes/vault-operator:latest
           - quay.io/hopopops/vault-operator:${CI_COMMIT_TAG}
-          - quay.io/hopopops/vault-operator:latest
           - docker.io/hopopops/vault-operator:${CI_COMMIT_TAG}
-          - docker.io/hopopops/vault-operator:latest
     when:
       - event:
           - tag

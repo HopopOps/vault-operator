@@ -1,22 +1,17 @@
 ---
 when:
-  - event:
+  - &on-tags
+    event:
+      - tag
+  - &on-main
+    event:
       - manual
       - push
     branch: main
-  - event:
-      - pull_request
-variables:
-  - &oci-image code.hopopops.com/woodpecker-plugins/oci:1.0.0
-  - &oci-url oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
-  - &on-main
-    - event:
-        - manual
-        - push
-      branch: main
   - &on-pull-request
-    - event:
-        - pull_request
+    event:
+      - pull_request
+
 steps:
   - name: registry:login
     image: docker.io/library/busybox:latest
@@ -38,30 +33,34 @@ steps:
           }
         }
         EOF
-  - name: manifests:publish
-    image: *oci-image
+
+  - name: manifests:main:publish
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
     environment:
       DOCKER_CONFIG: ".docker"
     settings:
-      url: *oci-url
+      url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: dist
       reproducible: true
       output: json
-    when: *on-main
+    when:
+      - *on-main
+
   # Pull the published manifests next to a freshly generated set so a pull request shows what
   # it would change once merged. Ignored on failure, the artifact does not exist on the first run.
-  - name: manifests:fetch
-    image: *oci-image
+  - name: manifests:mr:fetch
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
     environment:
       DOCKER_CONFIG: ".docker"
     failure: ignore
     settings:
       action: pull
-      url: *oci-url
+      url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: oci-dist
       clean: true
-    when: *on-pull-request
-  - name: manifests:diff
+    when:
+      - *on-pull-request
+  - name: manifests:mr:diff
     image: docker.io/library/golang:1.27
     environment:
       GOPROXY: https://go.pkgs.cache.valhall.lan,direct
@@ -72,4 +71,27 @@ steps:
       - IMG="$(awk '/newName:/{n=$2} /newTag:/{t=$2} END {print n":"t}' config/manager/kustomization.yaml)"
       - make build-installer IMG="$${IMG}"
       - diff -u --color=always oci-dist/install.yaml dist/install.yaml || true
-    when: *on-pull-request
+    when:
+      - *on-pull-request
+
+  - name: manifests:release:build
+    image: docker.io/library/golang:1.27
+    environment:
+      GOPROXY: https://go.pkgs.cache.valhall.lan,direct
+      GOPRIVATE: code.hopopops.com
+      GOFLAGS: -buildvcs=false
+    commands:
+      - make build-installer IMG="quay.io/hopopops/vault-operator:${CI_COMMIT_TAG}"
+    when:
+      - *on-tags
+  - name: manifests:release:publish
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
+    environment:
+      DOCKER_CONFIG: ".docker"
+    settings:
+      url: "oci://code.hopopops.com/kubernetes/vault-operator/manifests:${CI_COMMIT_TAG}"
+      path: dist
+      reproducible: true
+      output: json
+    when:
+      - *on-tags
