@@ -1,12 +1,12 @@
 # vault-operator
 
-A small Kubernetes operator managing HashiCorp Vault policies, kubernetes auth roles, auth
-method mounts and tokens from CRDs, so that Vault configuration can live next to the app bundle
-that uses it in a GitOps pipeline.
+A small Kubernetes operator managing HashiCorp Vault policies, kubernetes auth roles, mounts,
+tokens and database secret engines from CRDs, so that Vault configuration can live next to the
+app bundle that uses it in a GitOps pipeline.
 
 If you need broad coverage of the Vault API, use
 [redhat-cop/vault-config-operator](https://github.com/redhat-cop/vault-config-operator) instead.
-This one deliberately implements four resources.
+This one deliberately implements a handful of resources.
 
 ## Resources
 
@@ -18,9 +18,15 @@ All resources are namespaced. The Vault object name is derived from the CR.
 | `Auth` | `sys.toolkit.vault.hopopops.com/v1beta1` | auth method mount (`spec.type`, `spec.description`, tuning) |
 | `KubernetesRole` | `auth.toolkit.vault.hopopops.com/v1beta1` | kubernetes auth role (`spec.boundServiceAccount*`, `spec.tokenPolicies`, …) |
 | `Token` | `auth.toolkit.vault.hopopops.com/v1beta1` | a Vault token, written to the Secret named by `spec.target.name` under key `token` |
+| `Mount` | `sys.toolkit.vault.hopopops.com/v1beta1` | secret engine mount (`spec.type`, `spec.options`, tuning) |
+| `PasswordPolicy` | `sys.toolkit.vault.hopopops.com/v1beta1` | password policy (`spec.policy`, HCL) |
+| `Config` | `database.toolkit.vault.hopopops.com/v1beta1` | database secret engine connection (`database/config/<name>`) |
+| `Role` | `database.toolkit.vault.hopopops.com/v1beta1` | database secret engine role (`database/roles/<name>`) |
 
-`Token` renews its lease and rewrites the Secret; `spec.target.deletionPolicy` (`Retain`,
-default, or `Delete`) decides what happens to the Secret when the CR goes away.
+`Config` watches the Secret named by `spec.rootCredentials.secretName` so a rotated password is
+pushed to Vault again. The manager only informs on Secrets labelled
+`toolkit.vault.hopopops.com/watch: "true"`, so that Secret must carry the label; reconciliation
+fails loudly without it rather than silently missing the next rotation.
 
 Examples live in `config/samples/`.
 

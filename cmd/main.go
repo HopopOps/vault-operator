@@ -26,10 +26,13 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
@@ -37,9 +40,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	authv1beta1 "hopopops/vault-operator/api/auth/v1beta1"
+	databasev1beta1 "hopopops/vault-operator/api/database/v1beta1"
 	sysv1beta1 "hopopops/vault-operator/api/sys/v1beta1"
 	"hopopops/vault-operator/internal/connector/vault"
+	"hopopops/vault-operator/internal/controller"
 	authcontroller "hopopops/vault-operator/internal/controller/auth"
+	databasecontroller "hopopops/vault-operator/internal/controller/database"
 	syscontroller "hopopops/vault-operator/internal/controller/sys"
 	// +kubebuilder:scaffold:imports
 )
@@ -54,6 +60,7 @@ func init() {
 
 	utilruntime.Must(sysv1beta1.AddToScheme(scheme))
 	utilruntime.Must(authv1beta1.AddToScheme(scheme))
+	utilruntime.Must(databasev1beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -172,8 +179,20 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsServerOptions,
+		Scheme:  scheme,
+		Metrics: metricsServerOptions,
+		// Secrets are only informed on when labelled, so watching the root
+		// credentials of a database Config does not cache every Secret in the
+		// cluster. Reads stay uncached so the Secrets the operator owns, which
+		// carry no label, are still reachable.
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {Label: controller.SecretWatchSelector()},
+			},
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{DisableFor: []client.Object{&corev1.Secret{}}},
+		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
@@ -235,6 +254,38 @@ func main() {
 		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "auth-token")
+		os.Exit(1)
+	}
+	if err := (&syscontroller.MountReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "sys-mount")
+		os.Exit(1)
+	}
+	if err := (&syscontroller.PasswordPolicyReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "sys-passwordpolicy")
+		os.Exit(1)
+	}
+	if err := (&databasecontroller.ConfigReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "database-config")
+		os.Exit(1)
+	}
+	if err := (&databasecontroller.RoleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "database-role")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

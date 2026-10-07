@@ -4,4 +4,8 @@ resources:
   - auth_v1beta1_kubernetesrole.yaml
 - sys_v1beta1_auth.yaml
 - auth_v1beta1_token.yaml
+- sys_v1beta1_mount.yaml
+- sys_v1beta1_passwordpolicy.yaml
+- database_v1beta1_config.yaml
+- database_v1beta1_role.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

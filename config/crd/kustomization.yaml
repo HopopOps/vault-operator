@@ -6,6 +6,10 @@ resources:
 - bases/auth.toolkit.vault.hopopops.com_kubernetesroles.yaml
 - bases/sys.toolkit.vault.hopopops.com_auths.yaml
 - bases/auth.toolkit.vault.hopopops.com_tokens.yaml
+- bases/sys.toolkit.vault.hopopops.com_mounts.yaml
+- bases/sys.toolkit.vault.hopopops.com_passwordpolicies.yaml
+- bases/database.toolkit.vault.hopopops.com_configs.yaml
+- bases/database.toolkit.vault.hopopops.com_roles.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

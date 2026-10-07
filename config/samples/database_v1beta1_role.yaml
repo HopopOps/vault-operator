@@ -1,0 +1,15 @@
+apiVersion: database.toolkit.vault.hopopops.com/v1beta1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: role-sample
+spec:
+  path: database
+  dbName: config-sample
+  defaultTTL: 3600
+  maxTTL: 86400
+  creationStatements:
+    - CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
+    - GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";

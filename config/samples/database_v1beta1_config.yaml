@@ -1,0 +1,21 @@
+apiVersion: database.toolkit.vault.hopopops.com/v1beta1
+kind: Config
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: config-sample
+spec:
+  path: database
+  pluginName: postgresql-database-plugin
+  connectionURL: postgresql://{{username}}:{{password}}@postgres.default.svc:5432/postgres?sslmode=disable
+  passwordAuthentication: scram-sha-256
+  passwordPolicy: passwordpolicy-sample
+  allowedRoles:
+    - role-sample
+  # The Secret is watched, so a rotation of this password is pushed back to
+  # Vault. It must carry the label toolkit.vault.hopopops.com/watch: "true".
+  rootCredentials:
+    secretName: postgres-root
+    usernameKey: username
+    passwordKey: password

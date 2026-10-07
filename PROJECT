@@ -46,4 +46,40 @@ resources:
   kind: Token
   path: hopopops/vault-operator/api/auth/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: sys
+  kind: Mount
+  path: hopopops/vault-operator/api/sys/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: sys
+  kind: PasswordPolicy
+  path: hopopops/vault-operator/api/sys/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: database
+  kind: Config
+  path: hopopops/vault-operator/api/database/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: toolkit.vault.hopopops.com
+  group: database
+  kind: Role
+  path: hopopops/vault-operator/api/database/v1beta1
+  version: v1beta1
 version: "3"

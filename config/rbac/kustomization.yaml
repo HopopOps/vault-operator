@@ -22,6 +22,18 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the vault-operator itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- database_role_admin_role.yaml
+- database_role_editor_role.yaml
+- database_role_viewer_role.yaml
+- database_config_admin_role.yaml
+- database_config_editor_role.yaml
+- database_config_viewer_role.yaml
+- sys_passwordpolicy_admin_role.yaml
+- sys_passwordpolicy_editor_role.yaml
+- sys_passwordpolicy_viewer_role.yaml
+- sys_mount_admin_role.yaml
+- sys_mount_editor_role.yaml
+- sys_mount_viewer_role.yaml
 - auth_token_admin_role.yaml
 - auth_token_editor_role.yaml
 - auth_token_viewer_role.yaml

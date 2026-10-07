@@ -1,0 +1,13 @@
+apiVersion: sys.toolkit.vault.hopopops.com/v1beta1
+kind: Mount
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: database
+spec:
+  type: database
+  description: Dynamic database credentials
+  config:
+    defaultLeaseTTL: 1h
+    maxLeaseTTL: 24h

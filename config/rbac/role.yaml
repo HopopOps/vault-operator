@@ -46,9 +46,40 @@ rules:
   - patch
   - update
 - apiGroups:
+  - database.toolkit.vault.hopopops.com
+  resources:
+  - configs
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - database.toolkit.vault.hopopops.com
+  resources:
+  - configs/finalizers
+  - roles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - database.toolkit.vault.hopopops.com
+  resources:
+  - configs/status
+  - roles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - sys.toolkit.vault.hopopops.com
   resources:
   - auths
+  - mounts
+  - passwordpolicies
   - policies
   verbs:
   - create
@@ -62,6 +93,8 @@ rules:
   - sys.toolkit.vault.hopopops.com
   resources:
   - auths/finalizers
+  - mounts/finalizers
+  - passwordpolicies/finalizers
   - policies/finalizers
   verbs:
   - update
@@ -69,6 +102,8 @@ rules:
   - sys.toolkit.vault.hopopops.com
   resources:
   - auths/status
+  - mounts/status
+  - passwordpolicies/status
   - policies/status
   verbs:
   - get
