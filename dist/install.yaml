@@ -2437,7 +2437,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: quay.io/hopopops/vault-operator:0.3.2
+        image: code.hopopops.com/kubernetes/vault-operator:latest
         livenessProbe:
           httpGet:
             path: /healthz
