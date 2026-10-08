@@ -1,11 +1,57 @@
 ---
 when:
-  - event:
+  - &on-tags
+    event:
+      - tag
+  - &on-main
+    event:
       - manual
       - push
-      - tag
+    branch: main
+
+variables:
+  - &build-configuration
+    provenance: true
+    sbom: true
+    sbomOutputPath: "./sbom-out"
+    labels:
+      - name: org.opencontainers.image.authors
+        value: "Vianney <vianney@hopopops.com>"
+      - name: org.opencontainers.image.vendor
+        value: HopopOps
+      - name: org.opencontainers.image.title
+        value: vault-operator
+      - name: org.opencontainers.image.description
+        value: >-
+          An operator to support configuring ACL and KSA bindings to Vault policies and Vault authentication engine roles from within Kubernetes
+      - name: org.opencontainers.image.documentation
+        value: https://code.hopopops.com/kubernetes/vault-operator/
+
 steps:
-  - name: build:login
+  - name: build:login:branch
+    image: docker.io/library/busybox:latest
+    environment:
+      FORGE_USERNAME:
+        from_secret: forge-username
+      FORGE_PASSWORD:
+        from_secret: forge-password
+      DOCKER_CONFIG: ".docker"
+    commands:
+      - |
+        mkdir -p "$${DOCKER_CONFIG}"
+        cat <<EOF > "$${DOCKER_CONFIG}/config.json"
+        {
+          "auths": {
+            "code.hopopops.com": {
+              "auth": "$(echo -n "$${FORGE_USERNAME}:$${FORGE_PASSWORD}" | base64 -w 0)"
+            }
+          }
+        }
+        EOF
+    when:
+      - *on-main
+
+  - name: build:login:release
     image: docker.io/library/busybox:latest
     environment:
       FORGE_USERNAME:
@@ -40,7 +86,7 @@ steps:
         }
         EOF
     when:
-      event: tag
+      - *on-tags
 
   - name: build:package:branch
     image: code.hopopops.com/woodpecker-plugins/buildkit-build:1.0.9
@@ -50,27 +96,11 @@ steps:
           - name: DOCKER_CONFIG
             value: ".docker"
       build:
-        provenance: true
-        sbom: true
-        sbomOutputPath: "./sbom-out"
-        labels:
-          - name: org.opencontainers.image.authors
-            value: "Vianney <vianney@hopopops.com>"
-          - name: org.opencontainers.image.vendor
-            value: HopopOps
-          - name: org.opencontainers.image.title
-            value: vault-operator
-          - name: org.opencontainers.image.description
-            value: >-
-              An operator to support configuring ACL and KSA bindings to Vault policies and Vault authentication engine roles from within Kubernetes
-          - name: org.opencontainers.image.documentation
-            value: https://code.hopopops.com/kubernetes/vault-operator/
+        !!merge <<: *build-configuration
         destinations:
           - code.hopopops.com/kubernetes/vault-operator:latest
     when:
-      - event:
-          - manual
-          - push
+      - *on-main
 
   - name: build:package:release
     image: code.hopopops.com/woodpecker-plugins/buildkit-build:1.0.9
@@ -80,25 +110,10 @@ steps:
           - name: DOCKER_CONFIG
             value: ".docker"
       build:
-        provenance: true
-        sbom: true
-        sbomOutputPath: "./sbom-out"
-        labels:
-          - name: org.opencontainers.image.authors
-            value: "Vianney <vianney@hopopops.com>"
-          - name: org.opencontainers.image.vendor
-            value: HopopOps
-          - name: org.opencontainers.image.title
-            value: vault-operator
-          - name: org.opencontainers.image.description
-            value: >-
-              An operator to support configuring ACL and KSA bindings to Vault policies and Vault authentication engine roles from within Kubernetes
-          - name: org.opencontainers.image.documentation
-            value: https://code.hopopops.com/kubernetes/vault-operator/
+        !!merge <<: *build-configuration
         destinations:
           - code.hopopops.com/kubernetes/vault-operator:${CI_COMMIT_TAG}
           - quay.io/hopopops/vault-operator:${CI_COMMIT_TAG}
           - docker.io/hopopops/vault-operator:${CI_COMMIT_TAG}
     when:
-      - event:
-          - tag
+      - *on-tags
