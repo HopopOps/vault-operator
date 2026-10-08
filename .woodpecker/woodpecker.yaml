@@ -1,0 +1,17 @@
+---
+when:
+  - event:
+      - manual
+  - event:
+      - push
+    branch: main
+  - event:
+      - pull_request
+
+steps:
+  - name: woodpecker:lint
+    image: docker.io/woodpeckerci/woodpecker-cli:v3.19.0-alpine
+    environment:
+      WOODPECKER_DISABLE_UPDATE_CHECK: "true"
+    commands:
+      - woodpecker-cli lint .woodpecker/
