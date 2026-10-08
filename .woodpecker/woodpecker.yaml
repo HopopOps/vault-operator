@@ -21,4 +21,4 @@ steps:
           runAsUser: 65534
           runAsGroup: 65534
     commands:
-      - woodpecker-cli lint .woodpecker/
+      - woodpecker-cli lint --strict .woodpecker/

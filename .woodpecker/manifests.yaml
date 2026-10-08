@@ -35,10 +35,9 @@ steps:
         EOF
 
   - name: manifests:main:publish
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     settings:
+      docker_config: .docker
       url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: dist
       reproducible: true
@@ -47,11 +46,10 @@ steps:
       - *on-main
 
   - name: manifests:mr:fetch
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     failure: ignore
     settings:
+      docker_config: .docker
       action: pull
       url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: oci-dist
@@ -81,10 +79,9 @@ steps:
     when:
       - *on-tags
   - name: manifests:release:publish
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     settings:
+      docker_config: .docker
       url: "oci://code.hopopops.com/kubernetes/vault-operator/manifests:${CI_COMMIT_TAG}"
       path: dist
       reproducible: true
