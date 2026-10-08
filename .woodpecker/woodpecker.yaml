@@ -1,0 +1,24 @@
+---
+when:
+  - event:
+      - manual
+  - event:
+      - push
+    branch: main
+  - event:
+      - pull_request
+
+steps:
+  - name: woodpecker:lint
+    image: docker.io/woodpeckerci/woodpecker-cli:v3.19.0-alpine
+    environment:
+      WOODPECKER_DISABLE_UPDATE_CHECK: "true"
+    # the image defaults to uid 1000, but the nfs-client workspace is squashed to nobody:
+    # every directory the clone step creates is 0755 65534:65534, so only that uid can write
+    backend_options:
+      kubernetes:
+        securityContext:
+          runAsUser: 65534
+          runAsGroup: 65534
+    commands:
+      - woodpecker-cli lint --strict .woodpecker/

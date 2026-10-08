@@ -35,10 +35,9 @@ steps:
         EOF
 
   - name: manifests:main:publish
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     settings:
+      docker_config: .docker
       url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: dist
       reproducible: true
@@ -46,14 +45,11 @@ steps:
     when:
       - *on-main
 
-  # Pull the published manifests next to a freshly generated set so a pull request shows what
-  # it would change once merged. Ignored on failure, the artifact does not exist on the first run.
   - name: manifests:mr:fetch
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     failure: ignore
     settings:
+      docker_config: .docker
       action: pull
       url: oci://code.hopopops.com/kubernetes/vault-operator/manifests:latest
       path: oci-dist
@@ -67,9 +63,7 @@ steps:
       GOPRIVATE: code.hopopops.com
       GOFLAGS: -buildvcs=false
     commands:
-      # build-installer rewrites the kustomize image, keep the one the repository declares
-      - IMG="$(awk '/newName:/{n=$2} /newTag:/{t=$2} END {print n":"t}' config/manager/kustomization.yaml)"
-      - make build-installer IMG="$${IMG}"
+      - make build-installer
       - diff -u --color=always oci-dist/install.yaml dist/install.yaml || true
     when:
       - *on-pull-request
@@ -85,10 +79,9 @@ steps:
     when:
       - *on-tags
   - name: manifests:release:publish
-    image: code.hopopops.com/woodpecker-plugins/oci:1.0.0
-    environment:
-      DOCKER_CONFIG: ".docker"
+    image: code.hopopops.com/woodpecker-plugins/oci:1.0.1
     settings:
+      docker_config: .docker
       url: "oci://code.hopopops.com/kubernetes/vault-operator/manifests:${CI_COMMIT_TAG}"
       path: dist
       reproducible: true
