@@ -1,5 +1,8 @@
 # vault-operator
 
+> Canonical repository: [code.hopopops.com/kubernetes/vault-operator](https://code.hopopops.com/kubernetes/vault-operator).
+> The GitHub repository is a read-only mirror; issues and pull requests opened there are not watched.
+
 A small Kubernetes operator managing HashiCorp Vault policies, kubernetes auth roles, mounts,
 tokens and database secret engines from CRDs, so that Vault configuration can live next to the
 app bundle that uses it in a GitOps pipeline.
