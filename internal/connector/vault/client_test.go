@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	vaultapi "github.com/hashicorp/vault/api"
 )
 
 // TestClientRelogin checks that a client whose token is about to expire logs in
@@ -56,5 +58,32 @@ func TestClientRelogin(t *testing.T) {
 				t.Errorf("got token %q, want %q", c.Token(), want)
 			}
 		})
+	}
+}
+
+// TestIgnoreNotFound replays what Vault answers when the mount of the deleted
+// object is gone.
+func TestIgnoreNotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"errors":["no handler for route \"auth/gone/role/x\". route entry not found."]}`))
+	}))
+	defer srv.Close()
+
+	c, err := vaultapi.NewClient(&vaultapi.Config{Address: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = c.Logical().DeleteWithContext(context.Background(), "auth/gone/role/x")
+	if err == nil {
+		t.Fatal("the 404 did not surface as an error, the test no longer covers the finalizer case")
+	}
+	if err := IgnoreNotFound(err); err != nil {
+		t.Errorf("a 404 was not ignored: %v", err)
+	}
+
+	if err := IgnoreNotFound(&vaultapi.ResponseError{StatusCode: http.StatusForbidden}); err == nil {
+		t.Error("a 403 was ignored")
 	}
 }

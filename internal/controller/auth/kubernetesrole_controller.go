@@ -149,7 +149,7 @@ func (r *KubernetesRoleReconciler) deleteVaultKubernetesRole(ctx context.Context
 	}
 
 	_, err = c.Logical().DeleteWithContext(ctx, fmt.Sprintf("/auth/%s/role/%s", role.Spec.AuthPath, role.Name))
-	return err
+	return vault.IgnoreNotFound(err)
 }
 
 func (r *KubernetesRoleReconciler) fetchVaultKubernetesRole(ctx context.Context, role *authv1beta1.KubernetesRole) (*vault.KubernetesRole, error) {

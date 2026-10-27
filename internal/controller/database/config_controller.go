@@ -212,7 +212,7 @@ func (r *ConfigReconciler) deleteVaultConfig(ctx context.Context, config *databa
 	}
 
 	_, err = c.Logical().DeleteWithContext(ctx, configPath(config))
-	return err
+	return vault.IgnoreNotFound(err)
 }
 
 func (r *ConfigReconciler) vaultConfigExists(ctx context.Context, config *databasev1beta1.Config) (bool, error) {
