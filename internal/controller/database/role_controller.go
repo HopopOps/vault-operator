@@ -154,7 +154,7 @@ func (r *RoleReconciler) deleteVaultRole(ctx context.Context, role *databasev1be
 	}
 
 	_, err = c.Logical().DeleteWithContext(ctx, rolePath(role))
-	return err
+	return vault.IgnoreNotFound(err)
 }
 
 // fetchVaultRole returns the role held by Vault, or nil when there is none.

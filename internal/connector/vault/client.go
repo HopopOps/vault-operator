@@ -2,8 +2,10 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -107,4 +109,15 @@ func (v *Vault) login(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// IgnoreNotFound drops a 404 from Vault. Deleting an object whose mount is gone
+// (e.g. a role under a disabled auth method) answers "no handler for route":
+// the object went with its mount, so there is nothing left to delete.
+func IgnoreNotFound(err error) error {
+	var respErr *vaultapi.ResponseError
+	if errors.As(err, &respErr) && respErr.StatusCode == http.StatusNotFound {
+		return nil
+	}
+	return err
 }
