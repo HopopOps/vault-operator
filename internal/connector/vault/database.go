@@ -39,6 +39,13 @@ func (r *DatabaseRole) IsDifferentFrom(other *DatabaseRole) bool {
 	return !reflect.DeepEqual(r, other)
 }
 
+func orDefault(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
+}
+
 func nonNil(s []string) []string {
 	if s == nil {
 		return []string{}
@@ -56,10 +63,13 @@ func DatabaseConfigPayload(s *databasev1beta1.ConfigSpec, username, password str
 		"verify_connection":                  s.VerifyConnection,
 		"allowed_roles":                      s.AllowedRoles,
 		"root_credentials_rotate_statements": s.RootRotationStatements,
-		"connection_url":                     s.ConnectionURL,
 		"disable_escaping":                   s.DisableEscaping,
-		"username":                           username,
-		"password":                           password,
+		orDefault(s.RootCredentials.UsernameField, "username"): username,
+		orDefault(s.RootCredentials.PasswordField, "password"): password,
+	}
+
+	if s.ConnectionURL != "" {
+		payload["connection_url"] = s.ConnectionURL
 	}
 
 	if s.PluginVersion != "" {
