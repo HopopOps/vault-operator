@@ -32,6 +32,11 @@ pushed to Vault again. The manager only informs on Secrets labelled
 `toolkit.vault.hopopops.com/watch: "true"`, so that Secret must carry the label; reconciliation
 fails loudly without it rather than silently missing the next rotation.
 
+Plugins that do not take `username`/`password` get the root credentials under other connection
+parameters through `spec.rootCredentials.usernameField`/`passwordField`, and `connectionURL` may be
+left empty. For `mongodbatlas-database-plugin`: `public_key`/`private_key`, with `project_id` in
+`spec.pluginConfig`.
+
 Examples live in `config/samples/`.
 
 ## Configuration

@@ -42,6 +42,18 @@ type RootCredentials struct {
 	// +kubebuilder:default="password"
 	// +optional
 	PasswordKey string `json:"passwordKey,omitempty"`
+
+	// usernameField defines the connection parameter receiving the username,
+	// for plugins not using "username" (e.g. "public_key" for mongodbatlas).
+	// +kubebuilder:default="username"
+	// +optional
+	UsernameField string `json:"usernameField,omitempty"`
+
+	// passwordField defines the connection parameter receiving the password,
+	// for plugins not using "password" (e.g. "private_key" for mongodbatlas).
+	// +kubebuilder:default="password"
+	// +optional
+	PasswordField string `json:"passwordField,omitempty"`
 }
 
 // ConfigSpec defines the desired state of Config
@@ -65,9 +77,10 @@ type ConfigSpec struct {
 
 	// connectionURL defines the connection string used to connect to the database.
 	// The "{{username}}" and "{{password}}" templating directives are replaced
-	// with the root credentials.
-	// +required
-	ConnectionURL string `json:"connectionURL"`
+	// with the root credentials. Left out of the payload when empty, for plugins
+	// without a connection URL (e.g. mongodbatlas).
+	// +optional
+	ConnectionURL string `json:"connectionURL,omitempty"`
 
 	// username defines the name of the privileged database account. It takes
 	// precedence over the username read from the referenced Secret.

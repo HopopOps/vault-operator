@@ -72,7 +72,8 @@ spec:
                 description: |-
                   connectionURL defines the connection string used to connect to the database.
                   The "{{username}}" and "{{password}}" templating directives are replaced
-                  with the root credentials.
+                  with the root credentials. Left out of the payload when empty, for plugins
+                  without a connection URL (e.g. mongodbatlas).
                 type: string
               disableEscaping:
                 description: |-
@@ -117,6 +118,12 @@ spec:
                 description: rootCredentials defines where to read the credentials
                   of the privileged database account.
                 properties:
+                  passwordField:
+                    default: password
+                    description: |-
+                      passwordField defines the connection parameter receiving the password,
+                      for plugins not using "password" (e.g. "private_key" for mongodbatlas).
+                    type: string
                   passwordKey:
                     default: password
                     description: passwordKey defines the key of the Secret holding
@@ -126,6 +133,12 @@ spec:
                     description: |-
                       secretName defines the name of a Secret in the same namespace holding the
                       root credentials. The Secret is watched: a change to it is pushed to Vault.
+                    type: string
+                  usernameField:
+                    default: username
+                    description: |-
+                      usernameField defines the connection parameter receiving the username,
+                      for plugins not using "username" (e.g. "public_key" for mongodbatlas).
                     type: string
                   usernameKey:
                     default: username
@@ -154,7 +167,6 @@ spec:
                   when it is configured.
                 type: boolean
             required:
-            - connectionURL
             - path
             - pluginName
             - rootCredentials
