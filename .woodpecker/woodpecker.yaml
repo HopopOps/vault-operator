@@ -10,7 +10,7 @@ when:
 
 steps:
   - name: woodpecker:lint
-    image: docker.io/woodpeckerci/woodpecker-cli:v3.19.0-alpine
+    image: docker.io/woodpeckerci/woodpecker-cli:v3.20.1-alpine
     environment:
       WOODPECKER_DISABLE_UPDATE_CHECK: "true"
     # the image defaults to uid 1000, but the nfs-client workspace is squashed to nobody:
