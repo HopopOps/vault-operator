@@ -1,3 +1,13 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "Merge once the Woodpecker test pipeline passes.",
+      "matchPackageNames": [
+        "*"
+      ],
+      "automerge": true
+    }
+  ],
+  "platformAutomerge": false
 }

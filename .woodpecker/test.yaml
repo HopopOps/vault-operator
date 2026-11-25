@@ -1,0 +1,23 @@
+---
+when:
+  - event:
+      - manual
+      - pull_request
+  - event:
+      - push
+    branch: main
+
+steps:
+  - name: go:test
+    image: docker.io/library/golang:1.27
+    environment:
+      GOPROXY: https://go.pkgs.cache.valhall.lan,direct
+      # no GOPRIVATE: with it set, go fails to resolve setup-envtest, a module nested in
+      # controller-runtime, once the module cache holds the latter
+      GOFLAGS: -buildvcs=false
+    commands:
+      # generated code and manifests must be committed
+      - make manifests generate
+      - git diff --exit-code
+      # vet, then every package, the controllers against envtest
+      - make test
