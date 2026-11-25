@@ -8,4 +8,6 @@ resources:
 - sys_v1beta1_passwordpolicy.yaml
 - database_v1beta1_config.yaml
 - database_v1beta1_role.yaml
+- auth_v1beta1_oidcconfig.yaml
+- auth_v1beta1_oidcrole.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

@@ -17,7 +17,15 @@ limitations under the License.
 // Package controller holds what the per-group controller packages share.
 package controller
 
-import "k8s.io/apimachinery/pkg/labels"
+import (
+	"context"
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 // SecretWatchLabel opts a Secret into the manager's Secret informer. Only
 // labelled Secrets are cached and watched, so a Secret a database Config reads
@@ -27,4 +35,20 @@ const SecretWatchLabel = "toolkit.vault.hopopops.com/watch"
 // SecretWatchSelector matches the Secrets the informer holds.
 func SecretWatchSelector() labels.Selector {
 	return labels.SelectorFromSet(labels.Set{SecretWatchLabel: "true"})
+}
+
+// WatchedSecret reads a Secret that a controller pushes to Vault. Reads are
+// uncached, so an unlabelled Secret is readable but never watched, and a
+// rotation of it would go unnoticed. Refuse it rather than look healthy.
+func WatchedSecret(ctx context.Context, c client.Reader, key types.NamespacedName) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, key, secret); err != nil {
+		return nil, err
+	}
+
+	if secret.Labels[SecretWatchLabel] != "true" {
+		return nil, fmt.Errorf("secret %q is missing the label %s=true, a rotation of it would go unnoticed", secret.Name, SecretWatchLabel)
+	}
+
+	return secret, nil
 }

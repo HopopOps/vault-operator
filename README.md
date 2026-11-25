@@ -4,7 +4,7 @@
 > The GitHub repository is a read-only mirror; issues and pull requests opened there are not watched.
 
 A small Kubernetes operator managing HashiCorp Vault policies, kubernetes auth roles, mounts,
-tokens and database secret engines from CRDs, so that Vault configuration can live next to the
+tokens, OIDC auth and database secret engines from CRDs, so that Vault configuration can live next to the
 app bundle that uses it in a GitOps pipeline.
 
 If you need broad coverage of the Vault API, use
@@ -20,6 +20,8 @@ All resources are namespaced. The Vault object name is derived from the CR.
 | --- | --- | --- |
 | `Policy` | `sys.toolkit.vault.hopopops.com/v1beta1` | ACL policy (`spec.policy`, HCL) |
 | `Auth` | `sys.toolkit.vault.hopopops.com/v1beta1` | auth method mount (`spec.type`, `spec.description`, tuning) |
+| `OIDCConfig` | `auth.toolkit.vault.hopopops.com/v1beta1` | oidc auth method config (`auth/<spec.authPath>/config`) |
+| `OIDCRole` | `auth.toolkit.vault.hopopops.com/v1beta1` | oidc auth role (`auth/<spec.authPath>/role/<name>`) |
 | `KubernetesRole` | `auth.toolkit.vault.hopopops.com/v1beta1` | kubernetes auth role (`spec.boundServiceAccount*`, `spec.tokenPolicies`, …) |
 | `Token` | `auth.toolkit.vault.hopopops.com/v1beta1` | a Vault token, written to the Secret named by `spec.target.name` under key `token` |
 | `Mount` | `sys.toolkit.vault.hopopops.com/v1beta1` | secret engine mount (`spec.type`, `spec.options`, tuning) |
@@ -27,8 +29,9 @@ All resources are namespaced. The Vault object name is derived from the CR.
 | `Config` | `database.toolkit.vault.hopopops.com/v1beta1` | database secret engine connection (`database/config/<name>`) |
 | `Role` | `database.toolkit.vault.hopopops.com/v1beta1` | database secret engine role (`database/roles/<name>`) |
 
-`Config` watches the Secret named by `spec.rootCredentials.secretName` so a rotated password is
-pushed to Vault again. The manager only informs on Secrets labelled
+`Config` watches the Secret named by `spec.rootCredentials.secretName`, and `OIDCConfig` the one
+named by `spec.clientSecret.secretName`, so a rotated password or client secret is pushed to Vault
+again. The manager only informs on Secrets labelled
 `toolkit.vault.hopopops.com/watch: "true"`, so that Secret must carry the label; reconciliation
 fails loudly without it rather than silently missing the next rotation.
 
@@ -36,6 +39,11 @@ Plugins that do not take `username`/`password` get the root credentials under ot
 parameters through `spec.rootCredentials.usernameField`/`passwordField`, and `connectionURL` may be
 left empty. For `mongodbatlas-database-plugin`: `public_key`/`private_key`, with `project_id` in
 `spec.pluginConfig`.
+
+An OIDC login takes an `Auth` with `spec.type: oidc` (plus `spec.config.listingVisibility: unauth`
+for the UI login button), an `OIDCConfig` and at least one `OIDCRole` whose `spec.authPath` is that `Auth`'s name. Vault
+offers no delete on the config endpoint: deleting an `OIDCConfig` leaves the config in place until
+the `Auth` is deleted.
 
 Examples live in `config/samples/`.
 

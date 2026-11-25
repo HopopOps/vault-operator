@@ -20,6 +20,8 @@ rules:
   - auth.toolkit.vault.hopopops.com
   resources:
   - kubernetesroles
+  - oidcconfigs
+  - oidcroles
   - tokens
   verbs:
   - create
@@ -33,6 +35,7 @@ rules:
   - auth.toolkit.vault.hopopops.com
   resources:
   - kubernetesroles/finalizers
+  - oidcroles/finalizers
   - tokens/finalizers
   verbs:
   - update
@@ -40,6 +43,8 @@ rules:
   - auth.toolkit.vault.hopopops.com
   resources:
   - kubernetesroles/status
+  - oidcconfigs/status
+  - oidcroles/status
   - tokens/status
   verbs:
   - get

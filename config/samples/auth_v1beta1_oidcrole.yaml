@@ -1,0 +1,22 @@
+apiVersion: auth.toolkit.vault.hopopops.com/v1beta1
+kind: OIDCRole
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: default
+spec:
+  authPath: oidc
+  allowedRedirectURIs:
+    - https://vault.example.com/ui/vault/auth/oidc/oidc/callback
+    - http://localhost:8250/oidc/callback
+  userClaim: preferred_username
+  boundAudiences:
+    - vault
+  oidcScopes:
+    - profile
+    - email
+  tokenTTL: 3600
+  tokenMaxTTL: 28800
+  tokenPolicies:
+    - default

@@ -60,16 +60,57 @@ spec:
           spec:
             description: spec defines the desired state of Auth
             properties:
+              config:
+                description: |-
+                  config defines the tunable options of the auth method. It is pushed to
+                  Vault on every reconciliation, unlike type which is set at creation.
+                properties:
+                  allowedResponseHeaders:
+                    items:
+                      type: string
+                    type: array
+                  auditNonHmacRequestKeys:
+                    items:
+                      type: string
+                    type: array
+                  auditNonHmacResponseKeys:
+                    items:
+                      type: string
+                    type: array
+                  defaultLeaseTTL:
+                    type: string
+                  identityTokenKey:
+                    type: string
+                  listingVisibility:
+                    default: hidden
+                    description: |-
+                      listingVisibility "unauth" lists the method on the Vault UI login page,
+                      which an oidc method needs to offer a login button.
+                    enum:
+                    - unauth
+                    - hidden
+                    type: string
+                  maxLeaseTTL:
+                    type: string
+                  passthroughRequestHeaders:
+                    items:
+                      type: string
+                    type: array
+                  pluginVersion:
+                    type: string
+                type: object
               description:
                 default: ""
                 type: string
               type:
                 default: kubernetes
+                description: type defines the auth method, such as "kubernetes" or
+                  "oidc".
                 type: string
+                x-kubernetes-validations:
+                - message: type is immutable
+                  rule: self == oldSelf
             type: object
-            x-kubernetes-validations:
-            - message: AuthSpec is immutable
-              rule: self == oldSelf
           status:
             description: status defines the observed state of Auth
             properties:

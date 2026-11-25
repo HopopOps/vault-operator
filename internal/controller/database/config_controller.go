@@ -152,18 +152,12 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // rootCredentials reads the privileged database account out of the referenced
 // Secret. spec.username, when set, wins over the Secret's username key.
 func (r *ConfigReconciler) rootCredentials(ctx context.Context, config *databasev1beta1.Config) (string, string, error) {
-	secret := &corev1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName{
+	secret, err := controller.WatchedSecret(ctx, r, types.NamespacedName{
 		Namespace: config.Namespace,
 		Name:      config.Spec.RootCredentials.SecretName,
-	}, secret); err != nil {
+	})
+	if err != nil {
 		return "", "", err
-	}
-
-	// Reads are uncached, so an unlabelled Secret is readable but never watched,
-	// and a rotation of it would go unnoticed. Refuse rather than look healthy.
-	if secret.Labels[controller.SecretWatchLabel] != "true" {
-		return "", "", fmt.Errorf("secret %q is missing the label %s=true, a rotation of it would go unnoticed", secret.Name, controller.SecretWatchLabel)
 	}
 
 	username := config.Spec.Username

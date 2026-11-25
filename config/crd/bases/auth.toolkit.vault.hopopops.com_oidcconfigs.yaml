@@ -1,0 +1,212 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.22.0
+  name: oidcconfigs.auth.toolkit.vault.hopopops.com
+spec:
+  group: auth.toolkit.vault.hopopops.com
+  names:
+    kind: OIDCConfig
+    listKind: OIDCConfigList
+    plural: oidcconfigs
+    singular: oidcconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.authPath
+      name: Path
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Reason
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Message
+      priority: 1
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          OIDCConfig is the Schema for the oidcconfigs API. It manages
+          auth/<authPath>/config of an oidc auth method; one per mount.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of OIDCConfig
+            properties:
+              authPath:
+                default: oidc
+                description: authPath defines the remote path in Vault where the oidc
+                  auth method is enabled.
+                type: string
+                x-kubernetes-validations:
+                - message: AuthPath is immutable
+                  rule: self == oldSelf
+              boundIssuer:
+                description: boundIssuer defines the value the "iss" claim must match.
+                type: string
+              clientID:
+                description: clientID defines the OAuth client ID registered with
+                  the provider.
+                type: string
+              clientSecret:
+                description: clientSecret defines where to read the OAuth client secret.
+                properties:
+                  key:
+                    default: client-secret
+                    description: key defines the key of the Secret holding the client
+                      secret.
+                    type: string
+                  secretName:
+                    description: |-
+                      secretName defines the name of a Secret in the same namespace holding the
+                      client secret. The Secret is watched: a change to it is pushed to Vault.
+                    type: string
+                required:
+                - secretName
+                type: object
+              defaultRole:
+                description: defaultRole defines the role used when a login names
+                  none.
+                type: string
+              discoveryCAPEM:
+                description: |-
+                  discoveryCAPEM defines the CA certificate or chain, in PEM, used to validate
+                  the discovery URL. The system certificates are used when empty.
+                type: string
+              discoveryURL:
+                description: discoveryURL defines the OIDC discovery URL, without
+                  the .well-known component.
+                type: string
+              responseMode:
+                description: responseMode defines how the authorization response is
+                  returned.
+                enum:
+                - query
+                - form_post
+                type: string
+              responseTypes:
+                description: |-
+                  responseTypes defines the response types to request. "id_token" requires
+                  responseMode "form_post".
+                items:
+                  type: string
+                type: array
+              supportedAlgs:
+                description: supportedAlgs defines the signing algorithms accepted.
+                  Vault defaults to RS256 for OIDC roles.
+                items:
+                  type: string
+                type: array
+            required:
+            - clientID
+            - clientSecret
+            - discoveryURL
+            type: object
+          status:
+            description: status defines the observed state of OIDCConfig
+            properties:
+              conditions:
+                description: conditions represent the current state of the OIDCConfig
+                  resource.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              configHash:
+                description: |-
+                  configHash is the hash of the configuration last pushed to Vault, client
+                  secret included. Vault never returns the secret, so this is how a rotation
+                  of the referenced Secret is noticed.
+                type: string
+              observedGeneration:
+                description: observedGeneration is the .metadata.generation the status
+                  was last reconciled against.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

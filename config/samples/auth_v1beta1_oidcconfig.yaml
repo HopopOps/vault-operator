@@ -1,0 +1,19 @@
+apiVersion: auth.toolkit.vault.hopopops.com/v1beta1
+kind: OIDCConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: oidc
+spec:
+  # Mount it with an Auth named after authPath, spec.type: oidc and
+  # spec.config.listingVisibility: unauth to get the UI login button.
+  authPath: oidc
+  discoveryURL: https://accounts.example.com/realms/example
+  clientID: vault
+  # The Secret is watched, so a rotation of the client secret is pushed back to
+  # Vault. It must carry the label toolkit.vault.hopopops.com/watch: "true".
+  clientSecret:
+    secretName: vault-oidc
+    key: client-secret
+  defaultRole: default

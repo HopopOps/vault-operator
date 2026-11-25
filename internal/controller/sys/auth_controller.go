@@ -131,8 +131,14 @@ func (r *AuthReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		auth.Status.Accessor = ae.Accessor
 	}
 
-	// Always record the outcome, the auth engine may already have been created.
-	return ctrl.Result{}, r.setCondition(ctx, auth, metav1.ConditionTrue, "Configured", "Successfully created auth engine in Vault")
+	// Tuning is a plain write, pushed unconditionally as for Mount.
+	if err := r.tuneVaultAuth(ctx, auth); err != nil {
+		log.Error(err, "Failed to tune Auth")
+		_ = r.setCondition(ctx, auth, metav1.ConditionFalse, "FailedToUpdate", "Failed to tune auth engine in Vault")
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, r.setCondition(ctx, auth, metav1.ConditionTrue, "Configured", "Successfully pushed auth engine to Vault")
 }
 
 // setCondition records the reconciliation outcome for the current generation.
@@ -175,6 +181,27 @@ func (r *AuthReconciler) createVaultAuth(ctx context.Context, auth *sysv1beta1.A
 	return c.Sys().EnableAuthWithOptionsWithContext(ctx, fmt.Sprintf("%s/", auth.Name), &vaultapi.EnableAuthOptions{
 		Type:        *auth.Spec.Type,
 		Description: *auth.Spec.Description,
+	})
+}
+
+func (r *AuthReconciler) tuneVaultAuth(ctx context.Context, auth *sysv1beta1.Auth) error {
+	c, err := r.Vault.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	config := auth.Spec.Config
+	return c.Sys().TuneMountAllowNilWithContext(ctx, fmt.Sprintf("auth/%s", auth.Name), vaultapi.TuneMountConfigInput{
+		Description:               auth.Spec.Description,
+		DefaultLeaseTTL:           config.DefaultLeaseTTL,
+		MaxLeaseTTL:               config.MaxLeaseTTL,
+		ListingVisibility:         config.ListingVisibility,
+		PluginVersion:             config.PluginVersion,
+		IdentityTokenKey:          config.IdentityTokenKey,
+		AuditNonHMACRequestKeys:   stringList(config.AuditNonHMACRequestKeys),
+		AuditNonHMACResponseKeys:  stringList(config.AuditNonHMACResponseKeys),
+		PassthroughRequestHeaders: stringList(config.PassthroughRequestHeaders),
+		AllowedResponseHeaders:    stringList(config.AllowedResponseHeaders),
 	})
 }
 

@@ -24,31 +24,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// KubernetesRoleSpec defines the desired state of KubernetesRole
-type KubernetesRoleSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
-
-	// boundServiceAccountNames defines the list of service account names able to access this role. If set to "*" all names are allowed.
-	// +required
-	BoundServiceAccountNames []string `json:"boundServiceAccountNames"`
-
-	// boundServiceAccountNamespaces defines the list of namespaces allowed to access this role. If set to "*" all namespaces are allowed.
-	// +optional
-	BoundServiceAccountNamespaces []string `json:"boundServiceAccountNamespaces,omitempty"`
-
-	// audience defines the audience claim to verify in the JWT. Will be required in Vault 1.21+.
-	// +optional
-	Audience string `json:"audience,omitempty"`
-
-	// aliasNameSource configures how identity aliases are generated. Valid choices are `serviceaccount_uid` and `serviceaccount_name`.
-	// +kubebuilder:validation:Enum=serviceaccount_uid;serviceaccount_name
-	// +kubebuilder:default="serviceaccount_uid"
-	// +optional
-	AliasNameSource string `json:"aliasNameSource,omitempty"`
-
+// TokenFields are the token parameters common to every auth method role.
+type TokenFields struct {
 	// tokenTTL defines the incremental lifetime for generated tokens. This current value of this will be referenced at renewal time.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
@@ -89,6 +66,34 @@ type KubernetesRoleSpec struct {
 	// +kubebuilder:validation:Enum=service;batch;default;default-service;default-batch
 	// +optional
 	TokenType string `json:"tokenType,omitempty"`
+}
+
+// KubernetesRoleSpec defines the desired state of KubernetesRole
+type KubernetesRoleSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+	// The following markers will use OpenAPI v3 schema to validate the value
+	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+
+	// boundServiceAccountNames defines the list of service account names able to access this role. If set to "*" all names are allowed.
+	// +required
+	BoundServiceAccountNames []string `json:"boundServiceAccountNames"`
+
+	// boundServiceAccountNamespaces defines the list of namespaces allowed to access this role. If set to "*" all namespaces are allowed.
+	// +optional
+	BoundServiceAccountNamespaces []string `json:"boundServiceAccountNamespaces,omitempty"`
+
+	// audience defines the audience claim to verify in the JWT. Will be required in Vault 1.21+.
+	// +optional
+	Audience string `json:"audience,omitempty"`
+
+	// aliasNameSource configures how identity aliases are generated. Valid choices are `serviceaccount_uid` and `serviceaccount_name`.
+	// +kubebuilder:validation:Enum=serviceaccount_uid;serviceaccount_name
+	// +kubebuilder:default="serviceaccount_uid"
+	// +optional
+	AliasNameSource string `json:"aliasNameSource,omitempty"`
+
+	TokenFields `json:",inline"`
 
 	// authPath defines the remote path in Vault where the auth method is enabled.
 	// +kubebuilder:default="kubernetes"

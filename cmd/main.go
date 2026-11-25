@@ -181,9 +181,9 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:  scheme,
 		Metrics: metricsServerOptions,
-		// Secrets are only informed on when labelled, so watching the root
-		// credentials of a database Config does not cache every Secret in the
-		// cluster. Reads stay uncached so the Secrets the operator owns, which
+		// Secrets are only informed on when labelled, so watching the ones a
+		// database Config or an OIDCConfig pushes to Vault does not cache every
+		// Secret in the cluster. Reads stay uncached so the Secrets the operator owns, which
 		// carry no label, are still reachable.
 		Cache: cache.Options{
 			ByObject: map[client.Object]cache.ByObject{
@@ -286,6 +286,22 @@ func main() {
 		Vault:  v,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "database-role")
+		os.Exit(1)
+	}
+	if err := (&authcontroller.OIDCConfigReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "auth-oidcconfig")
+		os.Exit(1)
+	}
+	if err := (&authcontroller.OIDCRoleReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Vault:  v,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "auth-oidcrole")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

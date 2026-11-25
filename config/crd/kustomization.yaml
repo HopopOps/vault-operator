@@ -10,6 +10,8 @@ resources:
 - bases/sys.toolkit.vault.hopopops.com_passwordpolicies.yaml
 - bases/database.toolkit.vault.hopopops.com_configs.yaml
 - bases/database.toolkit.vault.hopopops.com_roles.yaml
+- bases/auth.toolkit.vault.hopopops.com_oidcconfigs.yaml
+- bases/auth.toolkit.vault.hopopops.com_oidcroles.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

@@ -37,6 +37,9 @@ type AuthConfig struct {
 	// +optional
 	AuditNonHMACResponseKeys []string `json:"auditNonHmacResponseKeys,omitempty"`
 
+	// listingVisibility "unauth" lists the method on the Vault UI login page,
+	// which an oidc method needs to offer a login button.
+	// +kubebuilder:validation:Enum=unauth;hidden
 	// +kubebuilder:default="hidden"
 	// +optional
 	ListingVisibility *string `json:"listingVisibility,omitempty"`
@@ -65,8 +68,15 @@ type AuthSpec struct {
 	// +kubebuilder:default=""
 	Description *string `json:"description,omitempty"`
 
+	// type defines the auth method, such as "kubernetes" or "oidc".
 	// +kubebuilder:default="kubernetes"
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="type is immutable"
 	Type *string `json:"type,omitempty"`
+
+	// config defines the tunable options of the auth method. It is pushed to
+	// Vault on every reconciliation, unlike type which is set at creation.
+	// +optional
+	Config AuthConfig `json:"config,omitzero"`
 }
 
 // AuthStatus defines the observed state of Auth.
@@ -115,7 +125,6 @@ type Auth struct {
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	// spec defines the desired state of Auth
-	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="AuthSpec is immutable"
 	// +required
 	Spec AuthSpec `json:"spec"`
 
